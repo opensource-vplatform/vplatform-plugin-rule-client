@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_CompareEntityData",
+    "plugins": [{
+        "type": "rule",
+        "code": "CompareEntityData",
+        "name": "界面实体之间数据比较",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.CompareEntityData.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

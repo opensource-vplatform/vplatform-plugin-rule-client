@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_ResetSelectedControlValue",
+    "plugins": [{
+        "type": "rule",
+        "code": "ResetSelectedControlValue",
+        "name": "清空控件数值",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.ResetSelectedControlValue.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

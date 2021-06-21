@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_CancelCloseWindow",
+    "plugins": [{
+        "type": "rule",
+        "code": "CancelCloseWindow",
+        "name": "取消窗体关闭",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.CancelCloseWindow.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

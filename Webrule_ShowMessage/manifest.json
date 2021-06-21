@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_ShowMessage",
+    "plugins": [{
+        "type": "rule",
+        "code": "ShowMessage",
+        "name": "显示设置的提示信息",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.ShowMessage.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

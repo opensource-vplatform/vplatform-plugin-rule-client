@@ -1,0 +1,13 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_AddTableRecord",
+    "version":"3.4.0",
+    "plugins": [{
+        "type": "rule",
+        "code": "AddTableRecord",
+        "name": "新增实体记录",
+        "desc": "对指定实体进行新增行操作。 \n方法名：AddTableRecord",
+        "entry": "com.yindangu.vplatform.rule.client.addtablerecord.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_QueryPaymentInfo",
+    "plugins": [{
+        "type": "rule",
+        "code": "QueryPaymentInfo",
+        "name": "查询支付信息",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.QueryPaymentInfo.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

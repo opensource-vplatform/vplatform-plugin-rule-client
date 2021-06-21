@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_LocateSelectRecord",
+    "plugins": [{
+        "type": "rule",
+        "code": "LocateSelectRecord",
+        "name": "记录选中/取消选中",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.LocateSelectRecord.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

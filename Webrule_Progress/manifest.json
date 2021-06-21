@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_Progress",
+    "plugins": [{
+        "type": "rule",
+        "code": "Progress",
+        "name": "进度条显示/隐藏",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.Progress.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

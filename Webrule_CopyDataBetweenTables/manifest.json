@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_CopyDataBetweenTables",
+    "plugins": [{
+        "type": "rule",
+        "code": "CopyDataBetweenTables",
+        "name": "表间数据复制",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.CopyDataBetweenTables.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

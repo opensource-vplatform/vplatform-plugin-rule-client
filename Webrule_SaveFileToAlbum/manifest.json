@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_SaveFileToAlbum",
+    "plugins": [{
+        "type": "rule",
+        "code": "SaveFileToAlbum",
+        "name": "保存图片或视频到相册",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.SaveFileToAlbum.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_OpenLink",
+    "plugins": [{
+        "type": "rule",
+        "code": "OpenLink",
+        "name": "打开链接地址",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.OpenLink.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

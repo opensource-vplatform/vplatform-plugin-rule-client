@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_DeleteListSelectRow",
+    "plugins": [{
+        "type": "rule",
+        "code": "DeleteListSelectRow",
+        "name": "删除实体记录",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.DeleteListSelectRow.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

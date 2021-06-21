@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_CheckRequired",
+    "plugins": [{
+        "type": "rule",
+        "code": "CheckRequired",
+        "name": "必填项检查",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.CheckRequired.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

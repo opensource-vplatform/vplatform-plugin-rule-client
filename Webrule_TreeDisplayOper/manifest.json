@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_TreeDisplayOper",
+    "plugins": [{
+        "type": "rule",
+        "code": "TreeDisplayOper",
+        "name": "树节点展开/折叠",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.TreeDisplayOper.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_DataBaseDataToInterfaceEntity",
+    "plugins": [{
+        "type": "rule",
+        "code": "DataBaseDataToInterfaceEntity",
+        "name": "从数据库获取数据到实体",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.DataBaseDataToInterfaceEntity.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

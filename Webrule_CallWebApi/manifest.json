@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_CallWebApi",
+    "plugins": [{
+        "type": "rule",
+        "code": "CallWebApi",
+        "name": "调用WebAPI",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.CallWebApi.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

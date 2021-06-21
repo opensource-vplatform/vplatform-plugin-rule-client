@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_RefreshSystemVariable",
+    "plugins": [{
+        "type": "rule",
+        "code": "RefreshSystemVariable",
+        "name": "刷新构件变量的值",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.RefreshSystemVariable.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_SetLoopVariant",
+    "plugins": [{
+        "type": "rule",
+        "code": "SetLoopVariant",
+        "name": "给循环变量赋值",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.SetLoopVariant.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_GenerateBillCode",
+    "plugins": [{
+        "type": "rule",
+        "code": "GenerateBillCode",
+        "name": "单据编号生成",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.GenerateBillCode.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_RefreshControlItems",
+    "plugins": [{
+        "type": "rule",
+        "code": "RefreshControlItems",
+        "name": "刷新控件的候选项",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.RefreshControlItems.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

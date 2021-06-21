@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_HardwareOperation",
+    "plugins": [{
+        "type": "rule",
+        "code": "HardwareOperation",
+        "name": "移动设备硬件操作",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.HardwareOperation.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

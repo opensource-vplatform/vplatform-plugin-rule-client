@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_RestoreXMLOrJSON",
+    "plugins": [{
+        "type": "rule",
+        "code": "RestoreXMLOrJSON",
+        "name": "配置数据还原",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.RestoreXMLOrJSON.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

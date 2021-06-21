@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_CursorJumpControl",
+    "plugins": [{
+        "type": "rule",
+        "code": "CursorJumpControl",
+        "name": "光标跳转控制",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.CursorJumpControl.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

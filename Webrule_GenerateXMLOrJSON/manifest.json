@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_GenerateXMLOrJSON",
+    "plugins": [{
+        "type": "rule",
+        "code": "GenerateXMLOrJSON",
+        "name": "配置数据生成",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.GenerateXMLOrJSON.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

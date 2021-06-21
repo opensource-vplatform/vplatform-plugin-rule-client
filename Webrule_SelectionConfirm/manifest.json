@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_SelectionConfirm",
+    "plugins": [{
+        "type": "rule",
+        "code": "SelectionConfirm",
+        "name": "退出窗体",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.SelectionConfirm.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

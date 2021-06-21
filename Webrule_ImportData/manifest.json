@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_ImportData",
+    "plugins": [{
+        "type": "rule",
+        "code": "ImportData",
+        "name": "Excel导入到数据库表[过时] -&gt; Excel导入到数据库表",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.ImportData.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

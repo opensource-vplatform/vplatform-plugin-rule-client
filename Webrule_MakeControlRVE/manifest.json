@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_MakeControlRVE",
+    "plugins": [{
+        "type": "rule",
+        "code": "MakeControlRVE",
+        "name": "控制控件的只读、使能、显示",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.MakeControlRVE.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

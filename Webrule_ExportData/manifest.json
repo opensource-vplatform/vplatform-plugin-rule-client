@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_ExportData",
+    "plugins": [{
+        "type": "rule",
+        "code": "ExportData",
+        "name": "导出数据库数据到Excel[过时] -&gt; 导出数据库数据到Excel",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.ExportData.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

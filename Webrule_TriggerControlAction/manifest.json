@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_TriggerControlAction",
+    "plugins": [{
+        "type": "rule",
+        "code": "TriggerControlAction",
+        "name": "触发控件事件[过时] -&gt; 执行方法",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.TriggerControlAction.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

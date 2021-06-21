@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_DynamicCrossDataToInterfaceEntity",
+    "plugins": [{
+        "type": "rule",
+        "code": "DynamicCrossDataToInterfaceEntity",
+        "name": "加载动态交叉表到实体",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.DynamicCrossDataToInterfaceEntity.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

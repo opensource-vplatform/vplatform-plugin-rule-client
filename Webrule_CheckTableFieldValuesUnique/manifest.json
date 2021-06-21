@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_CheckTableFieldValuesUnique",
+    "plugins": [{
+        "type": "rule",
+        "code": "CheckTableFieldValuesUnique",
+        "name": "唯一性检查",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.CheckTableFieldValuesUnique.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

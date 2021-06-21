@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_GetRecordCount",
+    "plugins": [{
+        "type": "rule",
+        "code": "GetRecordCount",
+        "name": "获取数据库表中记录数",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.GetRecordCount.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

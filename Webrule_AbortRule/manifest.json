@@ -1,0 +1,13 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_AbortRule",
+    "version":"3.4.0",
+    "plugins": [{
+        "type": "rule",
+        "code": "AbortRule",
+        "name": "中断规则",
+        "desc": "退出当前规则链：仅中断当前规则链的执行（若后续存在其他规则链，将继续执行）；\n中断所有规则链：中断所有规则链的执行（若后续存在其他规则链，也不再执行）；客户端：不回滚事务，服务端：回滚事务。\n方法名：AbortRule",
+        "entry": "com.yindangu.vplatform.rule.client.abortrule.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

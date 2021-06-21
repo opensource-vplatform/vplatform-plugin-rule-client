@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_InterfaceEntityRecordRecycling",
+    "plugins": [{
+        "type": "rule",
+        "code": "InterfaceEntityRecordRecycling",
+        "name": "界面实体记录循环处理",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.InterfaceEntityRecordRecycling.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

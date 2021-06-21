@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_OpenComponentReturnData",
+    "plugins": [{
+        "type": "rule",
+        "code": "OpenComponentReturnData",
+        "name": "打开窗体并返回数据",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.OpenComponentReturnData.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

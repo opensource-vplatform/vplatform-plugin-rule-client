@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_SetEntityVarControlValue",
+    "plugins": [{
+        "type": "rule",
+        "code": "SetEntityVarControlValue",
+        "name": "给界面实体/控件/变量赋值",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.SetEntityVarControlValue.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_LocateCurrentRecord",
+    "plugins": [{
+        "type": "rule",
+        "code": "LocateCurrentRecord",
+        "name": "记录定位",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.LocateCurrentRecord.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

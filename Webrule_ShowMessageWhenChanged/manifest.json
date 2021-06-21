@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_ShowMessageWhenChanged",
+    "plugins": [{
+        "type": "rule",
+        "code": "ShowMessageWhenChanged",
+        "name": "判断指定实体的数据是否发生变化",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.ShowMessageWhenChanged.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

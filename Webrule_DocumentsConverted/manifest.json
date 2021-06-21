@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_DocumentsConverted",
+    "plugins": [{
+        "type": "rule",
+        "code": "DocumentsConverted",
+        "name": "将表（及从表）数据插入到其它表",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.DocumentsConverted.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

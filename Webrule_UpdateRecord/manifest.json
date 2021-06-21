@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_UpdateRecord",
+    "plugins": [{
+        "type": "rule",
+        "code": "UpdateRecord",
+        "name": "保存实体到数据库",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.UpdateRecord.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

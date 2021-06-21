@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_MakeCertPic",
+    "plugins": [{
+        "type": "rule",
+        "code": "MakeCertPic",
+        "name": "生成随机验证码",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.MakeCertPic.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

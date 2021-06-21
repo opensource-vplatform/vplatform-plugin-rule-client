@@ -1,0 +1,12 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_SaveFile",
+    "plugins": [{
+        "type": "rule",
+        "code": "SaveFile",
+        "name": "保存图片",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.SaveFile.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}
