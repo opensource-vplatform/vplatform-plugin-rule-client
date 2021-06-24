@@ -1,6 +1,7 @@
 {
     "groupId": "com.toone.v3.platform",
     "code": "Webrule_I18nOperation",
+    "version":"3.5.0",
     "plugins": [{
         "type": "rule",
         "code": "I18nOperation",

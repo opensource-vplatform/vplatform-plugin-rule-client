@@ -1,6 +1,7 @@
 {
     "groupId": "com.toone.v3.platform",
     "code": "Webrule_ExecuteRuleSet",
+    "version":"3.11.0",
     "plugins": [{
         "type": "rule",
         "code": "ExecuteRuleSet",

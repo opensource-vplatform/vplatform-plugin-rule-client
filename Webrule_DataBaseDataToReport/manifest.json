@@ -1,6 +1,7 @@
 {
     "groupId": "com.toone.v3.platform",
     "code": "Webrule_DataBaseDataToReport",
+    "version":"3.18.0",
     "plugins": [{
         "type": "rule",
         "code": "DataBaseDataToReport",

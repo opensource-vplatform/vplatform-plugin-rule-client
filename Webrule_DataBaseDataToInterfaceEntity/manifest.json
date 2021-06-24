@@ -1,6 +1,7 @@
 {
     "groupId": "com.toone.v3.platform",
     "code": "Webrule_DataBaseDataToInterfaceEntity",
+    "version":"3.12.0",
     "plugins": [{
         "type": "rule",
         "code": "DataBaseDataToInterfaceEntity",

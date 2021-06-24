@@ -1,5 +1,6 @@
 {
     "groupId": "com.toone.v3.platform",
+    "version":"3.7.0",
     "code": "Webrule_SaveFileToAlbum",
     "plugins": [{
         "type": "rule",

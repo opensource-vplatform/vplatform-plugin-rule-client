@@ -1,6 +1,7 @@
 {
     "groupId": "com.toone.v3.platform",
     "code": "Webrule_ImportExcelToDB",
+    "version":"3.5.0",
     "plugins": [{
         "type": "rule",
         "code": "ImportExcelToDB",

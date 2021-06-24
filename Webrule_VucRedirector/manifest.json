@@ -1,6 +1,7 @@
 {
     "groupId": "com.toone.v3.platform",
     "code": "Webrule_VucRedirector",
+    "version":"3.3.0",
     "plugins": [{
         "type": "rule",
         "code": "VucRedirector",
