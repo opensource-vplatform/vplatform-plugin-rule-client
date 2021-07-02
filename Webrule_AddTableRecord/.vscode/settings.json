@@ -1,5 +1,0 @@
-{
-    "v3.deploy.account": "xiedh",
-    "v3.deploy.pwd": "summer",
-    "v3.apply.serverList": "[{\"server\":\"http://localhost:8080\",\"account\":\"xiedh\",\"pwd\":\"summer\",\"lastTime\":1623140139915},{\"server\":\"http://127.0.0.1:8080\",\"account\":\"xiedh\",\"pwd\":\"summer\",\"lastTime\":1622705784569}]"
-}
