@@ -9,6 +9,9 @@ var main = function (ruleContext) {
     return new Promise(function (resolve, reject) {
         try {
             var inParamsObj = ruleContext.getVplatformInput();
+            if(!inParamsObj){//奇怪的配置
+                inParamsObj = {};
+            }
             var display = inParamsObj["display"];
             var msgnote = inParamsObj["msgnote"];
             var isGlobal = (inParamsObj["displaytype"] + "").toLowerCase() === "current" ? false : true;
