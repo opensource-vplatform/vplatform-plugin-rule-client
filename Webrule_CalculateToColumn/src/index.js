@@ -3,204 +3,124 @@
  * fPrice*fAmount。)
  */
 
-	var jsonUtil;
-	var formulaUtil;
-	var widgetContext;
-	var storeTypes;
-	var ExpressionContext;
-	var windowVmManager;
-	var manager;
-	var sandbox;
-	var pusher;
-	var log;
-	exports.initModule = function(sBox) {
-		sandbox = sBox;
-		manager = sBox.getService("vjs.framework.extension.platform.services.model.manager.datasource.DatasourceManager");
-		windowVmManager = sBox.getService("vjs.framework.extension.platform.services.vmmapping.manager.WindowVMMappingManager");
-		jsonUtil = sBox.getService("vjs.framework.extension.util.JsonUtil");
-		widgetContext = sBox.getService("vjs.framework.extension.platform.services.view.widget.common.context.WidgetContext");
-		storeTypes = sBox.getService("vjs.framework.extension.platform.interface.enum.StoreTypes");
-		formulaUtil = sBox.getService("vjs.framework.extension.platform.engine.expression.ExpressionEngine");
-		ExpressionContext = sBox.getService("vjs.framework.extension.platform.engine.expression.ExpressionContext");
-		pusher = sBox.getService("vjs.framework.extension.platform.services.domain.datasource.DatasourcePusher");
-		log = sBox.getService("vjs.framework.extension.util.log");
+vds.import("vds.object.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.log.*", "vds.ds.*", "vds.widget.*");
 
-	}
-
-	var main = function(ruleContext) {
-		var ruleCfgValue = ruleContext.getRuleCfg();
-		var inParams = ruleCfgValue["inParams"];
-		var inParamsObj = jsonUtil.json2obj(inParams)
-
-		// 根据key获取规则配置参数值
-		var destFieldName = inParamsObj["destFieldName"]; // 赋值字段的fieldName
-		var dest = destFieldName.split(".");
-		var calFormula = inParamsObj["formula"]; // 计算公式
-		var dsName = dest[0];
-		destFieldName = dest[1];
-		var refWidgetIds = windowVmManager.getWidgetCodesByDatasourceName({
-			"datasourceName": dsName
-		});
-		var flag = true;
-		for (var index = 0; index < refWidgetIds.length; index++) {
-			var retWidgetId = refWidgetIds[index];
-			var widgetType = widgetContext.get(retWidgetId, "widgetType");
-			var storeType = widgetContext.getStoreType(retWidgetId);
-			if (storeType == storeTypes.SET) {
-				var dsNames = windowVmManager.getDatasourceNamesByWidgetCode({
-					"widgetCode": retWidgetId
-				});
-				var datasource = manager.lookup({
-					"datasourceName": dsNames[0]
-				});
-				var record = datasource.getCurrentRecord();
-				if (!record) {
-					return;
-				}
-				flag = false;
-				calculateValueForSet(calFormula, dsName, destFieldName,
-					record, ruleContext);
-				break;
-			} else if (storeType == storeTypes.SINGLE_RECORD) {
-				var fields = windowVmManager.getFieldCodesByWidgetCode({
-					"widgetCode": retWidgetId
-				});
-				if (fields && fields.length > 0) {
-					for (var i = 0; i < fields.length; i++) {
-						var field = fields[i];
-						if (field["refField"] == destFieldName) {
-							flag = false;
-							calculateValueForSingleValue(calFormula, dsName,
-								destFieldName, ruleContext);
-							break;
+var main = function (ruleContext) {
+	return new Promise(function (resolve, reject) {
+		try {
+			var inParamsObj = ruleContext.getVplatformInput();
+			//获取参数：赋值字段（格式：数据源.字段参数）
+			var destFieldName = inParamsObj["destFieldName"];
+			var dest = destFieldName.split(".");
+			//获取数据源名称
+			var dsName = dest[0];
+			//获取字段名称
+			destFieldName = dest[1];
+			//获取参数：计算公式
+			var calFormula = inParamsObj["formula"];
+			//获取计算公式的值
+			var value = exeExpression(calFormula, ruleContext);
+			//根据数据源名称获取绑定的控件编号集合
+			var refWidgetIds = vds.widget.getWidgetCodes(dsName);
+			var flag = true;
+			for (var index = 0; index < refWidgetIds.length; index++) {
+				var retWidgetId = refWidgetIds[index];
+				var storeType = vds.widget.getStoreType(retWidgetId);
+				if (storeType == vds.widget.StoreType.Set) {
+					var dsNames = vds.widget.getDatasourceCodes(retWidgetId);
+					var datasource = vds.ds.lookup(dsNames[0]);
+					var record = datasource.getCurrentRecord();
+					if (!record) {
+						return;
+					}
+					flag = false;
+					calculateValueForSet(datasource, record, destFieldName, value);
+					break;
+				} else if (storeType == vds.widget.StoreType.SingleRecord || storeType == vds.widget.StoreType.SingleRecordMultiValue) {
+					var fields = vds.widget.getFieldCodes(retWidgetId);
+					if (fields && fields.length > 0) {
+						for (var i = 0; i < fields.length; i++) {
+							var field = fields[i];
+							if (field == destFieldName) {
+								flag = false;
+								calculateValueForSingleValue(dsName, destFieldName, value);
+								break;
+							}
 						}
 					}
 				}
-
-			} else if (storeType == storeTypes.SINGLE_RECORD_MULTI_VALUE) {
-				var fields = windowVmManager.getFieldCodesByWidgetCode({
-					"widgetCode": retWidgetId
-				});
-				if (fields && fields.length > 0) {
-					for (var i = 0; i < fields.length; i++) {
-						var field = fields[i];
-						if (field["refField"] == destFieldName) {
-							flag = false;
-							calculateValueForSingleMultiValue(calFormula, dsName,
-								destFieldName, ruleContext);
-							break;
-						}
-					}
-				}
-
 			}
+			if (flag == true) {
+				calculateValueForSingleValue(dsName, destFieldName, value);
+			}
+			resolve();
+		} catch (ex) {
+			reject(ex);
 		}
-		if (flag == true) {
-			calculateValueForSingleValue(calFormula, dsName,
-				destFieldName, ruleContext);
-		}
-	};
+	});
+};
 
-	/**
-	 * 根据公式串与公式中的字段的fieldName计算公式值赋值给单行多值控件的fieldname。
-	 *
-	 * @param calFormula
-	 *            公式串 如：(HT_FKJH.JHBH+2)*HT_FKJH.BZ
-	 * @param dsName
-	 *            赋值字段的dsName
-	 * @param destFieldName
-	 *            赋值字段的fieldname
-	 */
-	var calculateValueForSingleMultiValue = function(calFormula, dsName, destFieldName, ruleContext) {
-		// 对公式进行计算
-		var context = new ExpressionContext();
-		context.setRouteContext(ruleContext.getRouteContext());
-		try{
-			var value = formulaUtil.execute({
-				"expression": calFormula,
-				"context": context
-			});
-			var obj = {};
-			obj[destFieldName] = value;
-			var pusher = sandbox.getService("vjs.framework.extension.platform.services.domain.datasource.DatasourcePusher");
-			pusher.setValues({
-				"datasourceName": dsName,
-				"values": obj
-			});
-		}catch(e){
-			var msg = "执行字段计算表达式【"+ calFormula +"】失败，原因" + e.message;
-			log.log(msg);
-		}
-		
-	};
+/**
+ * 获取计算公式的值
+ *
+ * @param calFormula
+ *            表达式
+ * @param ruleContext
+ *            规则上下文
+ */
+var exeExpression = function (calFormula, ruleContext) {
+	try {
+		//执行表达式
+		var value = vds.expression.execute(calFormula, { "ruleContext": ruleContext });
+		return value;
+	} catch (e) {
+		var msg = "执行字段计算表达式【" + calFormula + "】失败，原因" + e.message;
+		vds.log.log(msg);
+	}
+}
 
-	/**
-	 * 根据公式串与公式中的字段的fieldName计算公式值赋值给单值控件的fieldname。
-	 *
-	 * @param calFormula
-	 *            公式串 如：(HT_FKJH.JHBH+2)*HT_FKJH.BZ
-	 * @param dsName
-	 *            赋值字段的dsName
-	 * @param destFieldName
-	 *            赋值字段的fieldname
-	 */
-	var calculateValueForSingleValue = function(calFormula, dsName, destFieldName, ruleContext) {
-		// 对公式进行计算
-		// TODO:直接进行赋值 value = new Number(value).toFixed(4);
-		// 对应字段赋值
-		var context = new ExpressionContext();
-		context.setRouteContext(ruleContext.getRouteContext());
-		try{
-			var value = formulaUtil.execute({
-				"expression": calFormula,
-				"context": context
-			});
-			pusher.setFieldValue({"datasourceName":dsName,"fieldCode":destFieldName,"value":value});
-		}catch(e){
-			var msg = "执行字段计算表达式【"+ calFormula +"】失败，原因" + e.message;
-			log.log(msg);
-		}
-		
-		
+/**
+ * 给单值控件或单行多值控件字段赋值。
+ *
+ * @param dsName
+ *            赋值字段的dsName
+ * @param destFieldName
+ *            赋值字段的fieldname
+  * @param value
+ *            值
+ */
+var calculateValueForSingleValue = function (dsName, destFieldName, value) {
+	var datasource = vds.ds.lookup(dsName);
+	var record = datasource.getCurrentRecord();
+	if (!record) {
+		record = datasource.createRecord();
+		record.set(destFieldName, value);
+		datasource.insertRecords([record]);
+	}
+	else {
+		record.set(destFieldName, value);
+		datasource.updateRecords([record]);
+	}
+};
 
+/**
+ * 给集合控件的对应行的字段赋值。
+ *
+ * @param dsName
+ *            赋值字段的dsName
+ * @param destFieldName
+ *            赋值字段的fieldname
+ * @param record
+ *            集合控件操作行的数据
+  * @param value
+ *            值
+ */
+var calculateValueForSet = function (datasource, record, destFieldName, value) {
+	record.set(destFieldName, value);
+	datasource.updateRecords([record]);
+};
 
-	};
+// 注册规则主入口方法(必须有)
+exports.main = main;
 
-	/**
-	 * 根据公式串与公式中的字段的fieldName计算公式值赋值集合控件的对应行的某一列。
-	 *
-	 * @param calFormula
-	 *            公式串 如：(HT_FKJH.JHBH+2)*HT_FKJH.BZ
-	 * @param dsName
-	 *            赋值字段的dsName
-	 * @param destFieldName
-	 *            赋值字段的fieldname
-	 * @param record
-	 *            集合控件操作行的数据
-	 */
-	var calculateValueForSet = function(calFormula, dsName, destFieldName, record, ruleContext) {
-		var context = new ExpressionContext();
-		context.setRouteContext(ruleContext.getRouteContext());
-		try{
-			var value = formulaUtil.execute({
-				"expression": calFormula,
-				"context": context
-			});
-			record.set(destFieldName, value); //TODO:直接进行赋值，
-			// 对应字段赋值
-			var datasource = manager.lookup({
-				"datasourceName": dsName
-			});
-			datasource.updateRecords({
-				"records": [record]
-			});
-		}catch(e){
-			var msg = "执行字段计算表达式【"+ calFormula +"】失败，原因" + e.message;
-			log.log(msg);
-		}
-		
-	};
-	// 注册规则主入口方法(必须有)
-	exports.main = main;
-
-export{    main}
+export { main }
