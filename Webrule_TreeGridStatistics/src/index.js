@@ -30,17 +30,21 @@ var main = function (ruleContext) {
                 var newResult = ruleArgs[0]["newRecord"];
                 var oldResult = ruleArgs[0]["oldRecord"];
                 if (newResult) {
-                    newResult.iterate(function (record) {
+                    var newIterate = newResult.iterate;
+                    while(newIterate.hasNext()){
+                        var record = newIterate.next();
                         if (oldResult) {
-                            oldResult.iterate(function (oRecord) {
+                            var oldIterart = oldResult.iterate;
+                            while(oldIterart.hasNext()){
+                                var oRecord = oldIterart.next();
                                 if (record.getSysId() == oRecord.getSysId()) {
                                     _newFuntion(oRecord, record, operator, tableName, fieldNames, treeStruct);
                                 }
-                            });
+                            }
                         } else {
                             _newFuntion(null, record, operator, tableName, fieldNames, treeStruct);
                         }
-                    });
+                    }
                 } else if ("delete" == operator) {
 
 
@@ -53,9 +57,12 @@ var main = function (ruleContext) {
                 var tree = vds.tree.lookup(tableName, treeStruct[0]);
                 var all = tree.getAllRecords();
                 var allMap = {};
-                all.iterator(function(record){
-                    var id = record.get["id"];
-                    var PID = record.get["PID"];
+                var iterator = all.iterator();
+                var pidCode = tree.getTreeStruct().getPId();
+                while(iterator.hasNext()){
+                    var record = iterator.next();
+                    var id = record.get("id");
+                    var PID = record.get(pidCode);
                     var node = tree.getNodeById(id);
                     if (PID != null && PID != "") {
                         var nodeset = node.getChildren();
@@ -63,7 +70,7 @@ var main = function (ruleContext) {
                             allMap[PID] = node;
                         }
                     }
-                });
+                }
                 // for (var i = 0; i < all.datas.length; i++) {
                 //     var id = all.datas[i]["id"];
                 //     var PID = all.datas[i]["PID"];
@@ -93,7 +100,7 @@ function summary(node, fieldNames, tableName) {
     var broNodes = parNode.getChildren();
     var zongji = {};
     broNodes.iterate(function (node) {
-        var broNode = node.__recordData__;//???
+        var broNode = node.toMap();
         for (var j = 0; j < fieldNames.length; j++) {
             var column = fieldNames[j];
             var isexist = false;
