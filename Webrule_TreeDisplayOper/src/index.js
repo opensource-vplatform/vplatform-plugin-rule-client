@@ -4,7 +4,7 @@
  * 格式： {"dataSourceID": "", "dataSourceName": "",  "operType": "specUnFold", "unFoldCount": 3,"treeStruct": [{}]}
  *
  */
-vds.import("vds.tree,*","vds.exception.*","vds.widget.*","vds.expression.*");
+vds.import("vds.tree.*","vds.exception.*","vds.widget.*","vds.expression.*");
 /**
  * 规则入口
  */
@@ -23,7 +23,7 @@ var main = function (ruleContext) {
 			switch (operType) {
 				//折叠当前节点
 				case "fold":
-					var tree = treeViewUtil.getTree(widgetId);
+					var tree = getTree(widgetId);
 					var currRecord = tree.getCurrentRecord();
 					if (currRecord) {
 						collapseNode(widgetId, currRecord);
@@ -31,7 +31,7 @@ var main = function (ruleContext) {
 					break;
 					//展开当前节点
 				case "unFold":
-					var tree = treeViewUtil.getTree(widgetId);
+					var tree = getTree(widgetId);
 					var currRecord = tree.getCurrentRecord();
 					if (currRecord) {
 						var node = tree.getNodeById(currRecord.getSysId());
@@ -52,9 +52,6 @@ var main = function (ruleContext) {
 					throw vds.exception.newConfigException("不存在[" + type + "]参数类型，请检查！");
 			}
 			//TODO
-			// ruleContext.setRuleStatus(true);
-			// ruleContext.fireRuleCallback();
-			// ruleContext.fireRouteCallback();
 			resolve();
 		} catch (err) {
 			reject(err);
@@ -62,26 +59,40 @@ var main = function (ruleContext) {
 	});
 }
 
-var getTree = function(widgetId){//改在TreeViewUtil的getTree
+var getTree = function(widgetId){//改造TreeViewUtil的getTree
 	var dataSourceNames = vds.widget.getDatasourceCodes(widgetId);
-	var treeStruct = getTreeStruct(widgetId);
-	return vds.ds.lookup(dataSourceNames[0],treeStruct);
+	//数据源编码
+	var treeCode = dataSourceNames[0];
+	//父节点编码
+	var pId = vds.widget.getProperty(widgetId, "PIDColumn");
+	//是否叶子节点编码
+	var leafCode = vds.widget.getProperty(widgetId, "LeafNode");
+	//层级码字段编码
+	var innerCode = vds.widget.getProperty(widgetId, "InnerCodeColumn");
+	//排序字段编码
+	var orderNo = vds.widget.getProperty(widgetId, "OrderNoColumn");
+	//创建树结构
+	var treeStruct = vds.tree.createTreeStruct(treeCode, pId, orderNo, innerCode, leafCode, orderNo);
+	return vds.tree.lookup(treeCode, treeStruct);
 }
-var getTreeStruct = function(widgetId) {
-	var treeStruct = {};
-	treeStruct["isLeafField"] = getIsLeafRefField(widgetId);
-	treeStruct["orderField"] = getOrderNoRefField(widgetId);
-	treeStruct["pidField"] = getParentIdRefField(widgetId);
-	treeStruct["treeCodeField"] = getInnerCodeRefField(widgetId);
-	return treeStruct;
-};
-
-// var treeViewUtil, dataAdapter;
-// exports.initModule = function (sb) {
-// 	treeViewUtil = sb.getService("vjs.framework.extension.platform.services.domain.tree.TreeViewUtil");
-// 	dataAdapter = sb.getService("vjs.framework.extension.platform.services.viewmodel.dataadapter.DataAdapter");
-// }
-
+var genLoadSubTreeAccerror = function(params){//改造TreeViewUtil的genLoadSubTreeAccerror
+	var tree = params.tree,nodes=params.nodes;
+	var treeStruct = tree.getTreeStruct();
+	if(treeStruct){
+		var innerCode = treeStruct.getInnerCode();
+		var conditionScript = [];
+		for(var i=0,l=nodes.length;i<l;i++){
+			var node = nodes[i];
+			conditionScript.push(innerCode + " LIKE '" + node.get(innerCode) + "%'");
+		}
+		var dynamicCondition = conditionScript.join(" OR ");
+		tree.queryData(dynamicCondition, {
+			"isRefreshCondition":false,
+			"isAppend":true,
+			"isAsync":false
+		});
+	}
+}
 /**
  * 折叠当前记录
  * @param {Object} widgetId 控件ID
@@ -111,11 +122,8 @@ var expandNode = function (widgetId, node) {
 var expandTree = function (widgetId, depth) {
 	var loadDepth = 0;
 	try {
-		var tree = treeViewUtil.getTree(widgetId); //???
-		var accessor = tree.getDataAccessor(); //???
-		if (accessor) {
-			loadDepth = accessor.command.config.depth; //???
-		}
+		var tree = getTree(widgetId);
+		loadDepth = tree.getLoadedDepth();
 		if (!loadDepth) { //如果上一次加载为全部加载，则直接嗲用UI的全部展开接口
 			if (depth == 0) {
 				vds.widget.execute(widgetId, "expandAll");
@@ -155,21 +163,10 @@ var expandTree = function (widgetId, depth) {
  */
 var _get_subTreeNodes_FromDB = function (widgetId, nodes, isCallObserver, isRefleshConditon) {
 	try {
-		var tree = treeViewUtil.getTree(widgetId); //???
-		var accessor = tree.getDataAccessor(); //???
-		if (!accessor) return;
-		accessor = treeViewUtil.genLoadSubTreeAccerror({ //???
+		var tree = getTree(widgetId); 
+		genLoadSubTreeAccerror({
 			"tree": tree,
 			"nodes": nodes
-		});
-		var queryParam = {
-			"dataAccessObjects": [accessor],
-			"isAsync": false
-		}
-		dataAdapter.queryData({
-			"config": queryParam,
-			"isAppend": true,
-			"refreshCondition": false
 		});
 	} catch (e) {
 		window.console.error(e.message);
@@ -215,7 +212,7 @@ var _get_UnLoadSubTreeNodes_In_Node = function (widgetId, node) {
 var getUnLoadNodesMap = function (widgetId, depth) {
 	var unLoadRecordsMap = null;
 	//遍历树形
-	var tree = treeViewUtil.getTree(widgetId);
+	var tree = getTree(widgetId);
 	var roots = tree.getRoots();
 	var defDepth = 1;
 	roots.iterate(function (node, i) {

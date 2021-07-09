@@ -82,7 +82,14 @@ function TreeNodeEditor(datasourceName, treeStruct) {
     if (!vds.object.isArray(treeStruct) || (vds.object.isArray(treeStruct) && treeStruct.length != 1)) {
         throw vds.exception.newConfigException("树【"+datasourceName+"】的树型结构数据不正确，请检查");
     }
-    this.tree = vds.tree.lookup(datasourceName, treeStruct[0]);
+    treeStruct = treeStruct[0];
+    var newTreeStruct = {
+        "pId":treeStruct["pidField"],
+        "innerCode":treeStruct["treeCodeField"],
+        "orderNo":treeStruct["orderField"],
+        "isLeaf":treeStruct["isLeafField"],
+    };
+    this.tree = vds.tree.lookup(datasourceName, newTreeStruct);
     this.datasourceName = datasourceName;
     // this.isSupportMultiRoots = true;
 };

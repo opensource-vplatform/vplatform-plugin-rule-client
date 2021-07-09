@@ -1,7 +1,7 @@
 /**
  *	保存前端实体到数据库
  */
-vds.import("vds.rpc.*","vds.ds.*","vds.expression.*");
+vds.import("vds.rpc.*","vds.ds.*","vds.expression.*", "vds.tree.*");
 /**
  * 规则入口
  */
@@ -14,13 +14,11 @@ var main = function (ruleContext) {
 			if(treeStructMapArray instanceof Array){
 				for(var i = 0,len = treeStructMapArray.length;i<len;i++){
 					var treeStruct = treeStructMapArray[i];
-					if(treeStruct["tableName"]){
-						treeMap[treeStruct["tableName"]] = {
-							"pId":treeStruct["pidField"],
-							"innerCode":treeStruct["treeCodeField"],
-							"orderNo":treeStruct["orderField"],
-							"isLeaf":treeStruct["isLeafField"]
-						};
+					var entityName = treeStruct["tableName"];
+					if(entityName){
+						var struct = vds.tree.createTreeStruct(entityName, treeStruct["pidField"],
+							treeStruct["orderField"],treeStruct["treeCodeField"],treeStruct["isLeafField"],treeStruct["busiFilterField"])
+						treeMap[entityName] = struct;
 					}
 				}
 			}
