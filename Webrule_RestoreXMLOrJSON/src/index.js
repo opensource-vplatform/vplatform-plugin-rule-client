@@ -1,7 +1,7 @@
 /**
  * 流程提交
  */
-vds.import("vds.exception.*","vds.expression.*","vds.string.*","vds.object.*","vds.rpc.*","vds.ds.*");
+vds.import("vds.exception.*", "vds.expression.*", "vds.string.*", "vds.object.*", "vds.rpc.*", "vds.ds.*");
 /**
  * 规则入口
  */
@@ -17,15 +17,15 @@ var main = function (ruleContext) {
 			var restoreDataDetail = inParams["RestoreDataDetail"];
 
 			if (restoreDataType != "JSON" && restoreDataType != "XML") {
-				throw vds.exception.newConfigException("[RestoreXMLOrJSON.main]规则json配置有误,还原数据来源未设置，无法进行配置数据还原");
+				throw vds.exception.newConfigException("[RestoreXMLOrJSON]规则json配置有误,还原数据来源未设置，无法进行配置数据还原");
 			}
 
 			if (typeof restoreDataSrc != "string" || restoreDataSrc == "") {
-				throw vds.exception.newConfigException("[RestoreXMLOrJSON.main]规则json配置有误,数据来源表达式值不为JSON和XML，无法进行配置数据还原");
+				throw vds.exception.newConfigException("[RestoreXMLOrJSON]规则json配置有误,数据来源表达式值不为JSON和XML，无法进行配置数据还原");
 			}
 
 			if (!vds.object.isArray(restoreDataDetail) || restoreDataDetail.length <= 0) {
-				throw vds.exception.newConfigException("[RestoreXMLOrJSON.main]规则json配置有误,还原数据内容未指定，无法进行配置数据还原");
+				throw vds.exception.newConfigException("[RestoreXMLOrJSON]规则json配置有误,还原数据内容未指定，无法进行配置数据还原");
 			}
 
 			//配置数据内容值
@@ -46,19 +46,16 @@ var main = function (ruleContext) {
 				var elementValueDestField = restoreDataElement["ElementValueDestField"];
 
 				if (typeof elementNameSrc != "string" || elementNameSrc == "") {
-					throw vds.exception.newConfigException("[RestoreXMLOrJSON.main]规则json配置有误,还原数据内容中，元素名来源表达式串不允许为空且必须为字符串。");
+					throw vds.exception.newConfigException("[RestoreXMLOrJSON]规则json配置有误,还原数据内容中，元素名来源表达式串不允许为空且必须为字符串。");
 				}
 				if (typeof elementValueDestField != "string" ||
 					elementValueDestField == "" ||
 					elementValueDestField.indexOf(".") == -1) {
-					throw vds.exception.newConfigException(
-						"[RestoreXMLOrJSON.main]" +
-						"规则json配置有误,还原数据内容中，元素值对应的实体字段未设置，或字段名格式有误。");
+					throw vds.exception.newConfigException("[RestoreXMLOrJSON]规则json配置有误,还原数据内容中，元素值对应的实体字段未设置，或字段名格式有误。");
 				}
 
 				//			var elementNameValue = formulaUtil.evalExpression(elementNameSrc);
 				var elementNameValue = vds.expression.execute(elementNameSrc, {
-					"expression": elementNameSrc,
 					"ruleContext": ruleContext
 				});
 				if (typeof elementNameValue != "string" || elementNameValue == "") {
@@ -70,28 +67,6 @@ var main = function (ruleContext) {
 			}
 
 			var reqData = _generateRequestData(restoreDataType, restoreDataValue, elementNames);
-
-			// 构建后台规则参数
-			var inParamsObj = {};
-			var scope = scopeManager.getWindowScope();
-			inParamsObj.moduleId = scope.getWindowCode(); //???
-			//		inParamsObj.moduleId = viewContext.getModuleId();
-			inParamsObj.datas = reqData;
-
-			var inputParams = {
-				// ruleSetCode为活动集编号
-				"ruleSetCode": "CommonRule_RestoreXMLOrJSON",
-				// params为活动集输入参数
-				"params": {
-					"InParams": vds.string.toJson(inParamsObj)
-				}
-			};
-
-
-			var callBackFunc = function (output) {
-				// ruleContext.fireRuleCallback();
-				// ruleContext.fireRouteCallback(output);
-			}
 
 			// 调用完活动集之后的回调方法
 			var callback = function (responseObj) {
@@ -168,14 +143,10 @@ var main = function (ruleContext) {
 					var emptyRecords = [];
 					var datasource = vds.ds.lookup(table);
 					var emptyRecord = datasource.createRecord();
-					//				var emptyRecord = viewModel.getDataModule().createEmptyRecordByDS(table,true,true);
-
 					for (var index = 0; index < largestSize; index++) {
-						//var record = emptyRecord.createNew();
-
 						var tempRecord = emptyRecord.clone();
 						if (tempRecord.getMetadata().contains("id")) {
-							tempRecord.set("id", vds.string.uuid.generate());
+							tempRecord.set("id", vds.string.uuid());
 						}
 						var record = tempRecord;
 
@@ -199,36 +170,17 @@ var main = function (ruleContext) {
 					}
 
 					var elementValue = elementValueArr[subIndex];
-					//				viewModel.getDataModule().insertByDS(
-					//					table, 
-					//					emptyRecords, 
-					//					true, 
-					//					true);
 					var datasource = vds.ds.lookup(table);
 					datasource.insertRecords(emptyRecords);
 				}
 				resolve();
 			};
-			// var sConfig = {
-			// 	"isAsyn": true,
-			// 	"componentCode": scope.getComponentCode(),
-			// 	"windowCode": scope.getWindowCode(),
-			// 	"transactionId": ruleContext.getRouteContext().getTransactionId(),
-			// 	ruleSetCode: "CommonRule_RestoreXMLOrJSON",
-			// 	commitParams: [{
-			// 		"paramName": "InParams",
-			// 		"paramType": "char",
-			// 		"paramValue": inputParams.params.InParams
-			// 	}],
-			// 	afterResponse: callback
-			// };
-			//  调用后台活动集
-			//		operationLib.executeRuleSet(inputParams, callback);
-			// remoteMethodAccessor.invoke(sConfig);
 			var promise = vds.rpc.callCommand("CommonRule_RestoreXMLOrJSON", [{
 				"code": "InParams",
 				"type": "char",
-				"value": inputParams.params.InParams
+				"value": vds.string.toJson({//后台规则参数
+					"datas": reqData
+				})
 			}], {
 				"isAsyn": true,
 				"ruleContext": ruleContext
@@ -239,10 +191,6 @@ var main = function (ruleContext) {
 		}
 	});
 }
-// var scopeManager;
-// exports.initModule = function (sBox) {
-// 	scopeManager = sBox.getService("vjs.framework.extension.platform.interface.scope.ScopeManager");
-// }
 
 /**
  * 生成请求后台规则数据体
