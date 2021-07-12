@@ -77,7 +77,7 @@ function setBusinessRuleResult(ruleContext, returnValues, result) {
                     mergeType = vds.ds.MergeType.Load;
                     isClear = true;
                     break;
-                case "loadRecord":
+                case "updateRecord":
                     mergeType = vds.ds.MergeType.Update;
                     break;
                 default:
@@ -93,7 +93,7 @@ function setBusinessRuleResult(ruleContext, returnValues, result) {
                 records.push(record);
             }
             var destEntity = getEntity(target, targetType, ruleContext);
-            vds.ds.merge(destEntity, records, newMappings, mergeType, isClear, ruleContext.getMethodContext(), {
+            vds.ds.merge(destEntity, records, newMappings, mergeType, ruleContext.getMethodContext(), {
                 "isClear": isClear
             });
         } else {
