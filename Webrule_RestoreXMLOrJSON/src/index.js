@@ -142,10 +142,11 @@ var main = function (ruleContext) {
 
 					var emptyRecords = [];
 					var datasource = vds.ds.lookup(table);
+					var metadata = datasource.getMetadata();
 					var emptyRecord = datasource.createRecord();
 					for (var index = 0; index < largestSize; index++) {
 						var tempRecord = emptyRecord.clone();
-						if (tempRecord.getMetadata().contains("id")) {
+						if (metadata.contains("id")) {
 							tempRecord.set("id", vds.string.uuid());
 						}
 						var record = tempRecord;
