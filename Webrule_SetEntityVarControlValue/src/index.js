@@ -44,7 +44,7 @@ var VAR_TYPE = {
  * 对目标值进行设置
  * @param fieldMap 字段映射信息
  */
-var setTargetValue = function (fieldMap, methodContext) {
+var setTargetValue = function (fieldMap, ruleContext) {
 	var methodContext = ruleContext.getMethodContext();
 	/**
 	 * 保存需要赋值的实体字段信息

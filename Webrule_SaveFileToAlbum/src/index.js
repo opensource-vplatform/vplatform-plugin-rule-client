@@ -64,7 +64,7 @@ var executeExpression = function (expression, callback, reject) {
 		"expression": expression
 	};
 	var result = null;
-	var promise = vds.rpc.command("WebExecuteFormulaExpression", paramData, {
+	var promise = vds.rpc.callCommand("WebExecuteFormulaExpression", paramData, {
 		"isAsync": false,
 		"isRuleSetCode": false
 	});
