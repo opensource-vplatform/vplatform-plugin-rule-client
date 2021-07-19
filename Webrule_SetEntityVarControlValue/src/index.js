@@ -242,7 +242,7 @@ var copyBetweenEntities = function (params) {
 		// 如果记录没有ID的情况下，补充UUID
 		if (isExistValue) {
 			if (typeof (paramValueObj.id) == "undefined" || null == paramValueObj.id) {
-				paramValueObj.id = vds.string.generate();
+				paramValueObj.id = vds.string.uuid();
 			}
 			dataValues.push(paramValueObj);
 		}
