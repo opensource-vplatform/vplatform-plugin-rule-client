@@ -1,7 +1,88 @@
 ﻿/**
- *
- *
+ *导出数据库数据到Excel
  */
+
+vds.import("vds.component.*", "vds.ds.*", "vds.expression.*", "vds.log.*", "vds.string.*", "vds.widget.*", "vds.window.*");
+
+var main = function (ruleContext) {
+	return new Promise(function (resolve, reject) {
+		try {
+			var config = ruleContext.getVplatformInput();
+			config = MapTransform(config, ruleContext);
+			var gb_condSql = {};
+			var gb_title = {};
+			var gb_params = {};
+			var gb_condParams = {};
+			var fileType = config["fileType"];
+			for (var _i = 0; _i < config["items"].length; _i++) {
+				var cfg = config["items"][_i];
+				var dataName = cfg.dataName;
+				var iden_con = dataName + "_" + cfg.sheetName;
+				// 处理查询条件
+				var condCfgs = cfg.dsWhere;
+				var wrParam = {
+					"type": vds.ds.WhereType.Query,
+					"methodContext": ruleContext.getMethodContext()
+				};
+				var where = vds.ds.createWhere(wrParam);
+				if (condCfgs != null && condCfgs.length > 0) {
+					where.addCondition(condCfgs);
+				}
+				// 处理查询参数
+				var params = {};
+				if ('QUERY' == vds.string.toUpperCase(cfg.dataType)) {
+					var queryParams = cfg.dsQueryParam;
+					if (queryParams != null && queryParams.length > 0) {
+						params = genCustomParams(queryParams, ruleContext);
+					}
+				}
+				var title = '';
+				if (cfg.title)
+					title = vds.expression.execute(cfg.title, { "ruleContext": ruleContext });
+				gb_condSql[iden_con] = where.toWhere();
+				gb_condParams[iden_con] = where.toParameters();
+				gb_params[iden_con] = params;
+				gb_title[iden_con] = title;
+			}
+			var option = {
+				title: gb_title,
+				condSql: gb_condSql,
+				condParams: gb_condParams,
+				params: gb_params,
+				ruleConfig: vds.string.toJson(config),
+				ruleName: "ExportDataToExcel",
+				fileType: fileType
+			};
+			var token = {
+				data: option
+			};
+
+			var componentCode = vds.component.getCode();
+			var windowCode = vds.window.getCode();
+			windowCode = windowCode ? '&windowCode=' + windowCode : "";
+
+			var url = 'module-operation!executeOperation?componentCode='
+				+ componentCode + windowCode
+				+ '&operation=ExportDataToExcel';
+
+			/**
+			 * 梁朝辉 2015-02-09 创建一个from用post的方法提交数据，防止url超长的问题
+			 * token在createForm时处理
+			 */
+			var iframeId = "file_down_iframe";
+			var formId = "iframeDownForm"
+			var tokenJson = vds.string.toJson(token);
+			var tokenEncode = encodeURIComponent(tokenJson);
+			createIFrame(iframeId, "");
+			var formObj = createForm(formId, iframeId, url, tokenEncode);
+			formObj.submit();
+
+			resolve();
+		} catch (ex) {
+			reject(ex);
+		}
+	});
+}
 
 function MapTransform(cfg, ruleContext) {
 	var _result = {}
@@ -42,92 +123,6 @@ function MapTransform(cfg, ruleContext) {
 	}
 	return _result;
 }
-
-vds.import("vds.object.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.ds.*");
-
-var main = function (ruleContext) {
-	return new Promise(function (resolve, reject) {
-		try {
-			var ruleConfig = ruleContext.getRuleCfg();
-			var config = ruleContext.getVplatformInput();
-			config = MapTransform(config, ruleContext);
-			var gb_condSql = {};
-			var gb_title = {};
-			var gb_params = {};
-			var gb_condParams = {};
-			var routeContext = ruleContext.getRouteContext();
-			var fileType = config["fileType"];
-			for (var _i = 0; _i < config["items"].length; _i++) {
-				cfg = config["items"][_i];
-				var dataName = cfg.dataName;
-				var iden_con = dataName + "_" + cfg.sheetName;
-				// 处理查询条件
-				var condCfgs = cfg.dsWhere;
-				var wrParam = {
-					"type": vds.ds.WhereType.Query,
-					"methodContext": ruleContext.getMethodContext()
-				};
-				var where = vds.ds.createWhere(wrParam);
-				if (condCfgs != null && condCfgs.length > 0) {
-					where.addCondition(condCfgs);
-				}
-				// 处理查询参数
-				var params = {};
-				if ('QUERY' == vds.string.toUpperCase(cfg.dataType)) {
-					var queryParams = cfg.dsQueryParam;
-					if (queryParams != null && queryParams.length > 0) {
-						params = genCustomParams(queryParams, ruleConfig);
-					}
-				}
-				var title = '';
-				if (cfg.title)
-					title = vds.expression.execute(cfg.title, { "ruleContext": ruleContext });
-				gb_condSql[iden_con] = where.toWhere();
-				gb_condParams[iden_con] = where.toParameters();
-				gb_params[iden_con] = params;
-				gb_title[iden_con] = title;
-			}
-			var option = {
-				ruleInstId: ruleConfig.instanceCode,
-				title: gb_title,
-				condSql: gb_condSql,
-				condParams: gb_condParams,
-				params: gb_params,
-				ruleConfig: vds.string.toJson(config),
-				ruleName: "ExportDataToExcel",
-				fileType: fileType
-			};
-			var token = {
-				data: option
-			};
-
-			var componentCode = vds.component.getCode();
-			var windowCode = vds.window.getCode();
-			windowCode = windowCode ? '&windowCode=' + windowCode : "";
-
-			var url = 'module-operation!executeOperation?componentCode='
-				+ componentCode + windowCode
-				+ '&operation=ExportDataToExcel';
-
-			/**
-			 * 梁朝辉 2015-02-09 创建一个from用post的方法提交数据，防止url超长的问题
-			 * token在createForm时处理
-			 */
-			// url += '&token=' +
-			// encodeURIComponent(encodeURIComponent(vds.string.toJson(token)));
-			var iframeId = "file_down_iframe";
-			var formId = "iframeDownForm"
-			var tokenJson = vds.string.toJson(token);
-			var tokenEncode = encodeURIComponent(tokenJson);
-			createIFrame(iframeId, "");
-			var formObj = createForm(formId, iframeId, url, tokenEncode);
-			formObj.submit();
-		} catch (ex) {
-			reject(ex);
-		}
-	});
-}
-
 /**
  * 梁朝辉 2015-02-09 创建一个from用post的方法提交数据，防止url超长的问题
  */
@@ -300,6 +295,5 @@ var getDsName = function (widgetCode) {
 }
 
 //#endregion
-
 
 export { main }

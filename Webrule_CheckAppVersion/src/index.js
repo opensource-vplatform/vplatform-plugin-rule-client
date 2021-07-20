@@ -23,13 +23,9 @@ var main = function (ruleContext) {
 
 function setBusinessRuleResult(ruleContext, result) {
 	if (ruleContext.setResult) {
-		ruleContext.setResult({
-			// 最新的App版本号
-			version: result
-		});
+		// 最新的App版本号
+		ruleContext.setResult("version", result);
 	}
 }
-//注册规则主入口方法(必须有)
-exports.main = main;
 
 export { main }

@@ -10,7 +10,7 @@
  * </code>
  */
 
-vds.import("vds.attachment.*", "vds.browser.*", "vds.ds.*", "vds.exception.*", "vds.expression.*", "vds.rpc.*", "vds.string.*", "vds.widget.*");
+vds.import("vds.attachment.*", "vds.browser.*", "vds.component.*", "vds.ds.*", "vds.environment.*", "vds.exception.*", "vds.expression.*", "vds.rpc.*", "vds.string.*", "vds.widget.*", "vds.window.*");
 
 // 操作类型：上传、下载、删除、预览
 var OP_UPLOAD = '1', OP_DOWNLOAD = '2', OP_DELETE = '3', OP_PREVIEW = '4';
@@ -156,7 +156,7 @@ function getFirstSelectedFileId(fileIdField) {
  */
 function getSelectedFileIds(fileIdField) {
 	var dataSourceName = getDataSourceName(fileIdField);
-	var widgetCodes = vds.widget.getWidgetCodes(_dataSourceName);
+	var widgetCodes = vds.widget.getWidgetCodes(dataSourceName);
 	var chooseMode = 0;
 	if (widgetCodes && widgetCodes.length > 0) {
 		for (var j = 0, len = widgetCodes.length; j < len; j++) {

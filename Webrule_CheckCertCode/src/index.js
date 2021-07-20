@@ -9,7 +9,7 @@ function getCookie(name) {
 		return null;
 }
 
-vds.import("vds.environment.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.rpc.*", "vds.string.*", "vds.widget.*");
+vds.import("vds.environment.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.rpc.*", "vds.string.*", "vds.widget.*", "vds.window.*");
 
 // 规则主入口(必须有)
 var main = function (ruleContext) {
@@ -131,9 +131,7 @@ var main = function (ruleContext) {
 			 */
 			function setBusinessRuleResult(ruleContext, result) {
 				if (ruleContext.setResult) {
-					ruleContext.setResult({
-						isValidateOK: result
-					});
+					ruleContext.setResult("isValidateOK", result); 
 				}
 			}
 		} catch (ex) {

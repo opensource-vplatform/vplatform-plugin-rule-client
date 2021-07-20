@@ -71,8 +71,9 @@ var invokeOtherApi = function (webAPISite, returnInputParams, timeOut, invokeTar
 	var setReturn = function (invokeSourceValue, respondSourceValue) {
 		setVarValue(invokeTarget, invokeTargetType, invokeSourceValue, ruleContext);
 		setVarValue(respondTarget, respondTargetType, respondSourceValue, ruleContext);
+		resolve();
 	}
-	var invokeTarget, invokeTargetType, invokeSourceValue, respondTarget, respondTargetType, respondSourceValue;
+	var invokeSourceValue, respondSourceValue;
 	$.ajax({
 		url: webAPISite,
 		data: returnInputParams,
@@ -82,7 +83,6 @@ var invokeOtherApi = function (webAPISite, returnInputParams, timeOut, invokeTar
 		success: function (param) {
 			invokeSourceValue = true;
 			setReturn(invokeSourceValue, param);
-			resolve();
 		},
 		error: function (re) {
 			invokeSourceValue = false;
@@ -108,7 +108,8 @@ var invokeV3Webapi = function (webAPISite, returnInputParams, timeOut, returnMap
 
 	var error = ruleContext.genAsynCallback(
 		function (param) {
-			reject(param);
+			var exception = vds.exception.newSystemException(param.msg);
+			reject(exception);
 		}
 	);
 
@@ -435,7 +436,7 @@ var getEntity = function (entityName, entityType, ruleContext) {
 	} else if (entityType == "ruleSetInput") {
 		entity = ruleContext.getMethodContext().getInput(entityName);
 	} else if (entityType == "ruleSetOutput") {
-		entity = ruleContext.getMethodContext().getOutPut(entityName);
+		entity = ruleContext.getMethodContext().getOutput(entityName);
 	} else if (entityType == "ruleSetVariant" || entityType == "ruleSetVar") {
 		entity = ruleContext.getMethodContext().getVariable(entityName);
 	}
@@ -450,8 +451,5 @@ var getDatasource = function (datasourceName) {
 	var datasource = vds.ds.lookup(datasourceName);
 	return datasource;
 };
-
-// 注册规则主入口方法(必须有)
-exports.main = main;
 
 export { main }

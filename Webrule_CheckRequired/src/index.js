@@ -1,8 +1,8 @@
-/**
+﻿/**
  *  必填项检查
  */
 
-vds.import("vds.object.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.log.*", "vds.rpc.*", "vds.ds.*", "vds.widget.*");
+vds.import("vds.ds.*", "vds.i18n.*", "vds.message.*", "vds.string.*", "vds.tree.*", "vds.widget.*");
 
 // 规则主入口(必须有)
 var main = function (ruleContext) {
@@ -61,7 +61,7 @@ var main = function (ruleContext) {
 									}).toString();
 									checkMsgs.push(tmpl);
 								} else {
-									var tree = vds.tree.lookup(dsName);
+									var tree = vds.tree.getAll(dsName);
 									var tmpl = vds.i18n.get("第${a}行【${b}】必填！", "必填规则的提示信息");
 									if (tree.length > 0) {
 										//树
@@ -114,11 +114,14 @@ var main = function (ruleContext) {
 					promise.then(callback).catch(reject);
 				} else if (messageType == 4) { //不提示
 					setBusinessRuleResult(ruleContext, checkMsgs.length == 0, userConfirm);
+					resolve();
 				} else {
 					alert("--------------------");
+					resolve();
 				}
 			} else {
 				setBusinessRuleResult(ruleContext, checkMsgs.length == 0, userConfirm);
+				resolve();
 			}
 		} catch (ex) {
 			reject(ex);
@@ -138,10 +141,8 @@ var validateVui = function (entityCodes) {
  */
 function setBusinessRuleResult(ruleContext, result, userConfirm) {
 	if (ruleContext.setResult) {
-		ruleContext.setResult({
-			isCheckRequiredOK: result, //业务返回结果：校验是否通过
-			confirm: userConfirm
-		});
+		ruleContext.setResult("isCheckRequiredOK", result); 
+		ruleContext.setResult("confirm", userConfirm); 
 	}
 }
 export { main }

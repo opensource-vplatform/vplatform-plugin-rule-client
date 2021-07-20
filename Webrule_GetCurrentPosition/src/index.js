@@ -9,21 +9,17 @@ function main(ruleContext) {
 		try {
 			var success = function (rs) {
 				if (ruleContext.setResult) {
-					ruleContext.setResult({
-						//纬度
-						latitude: result.coords.latitude,
-						//经度
-						longitude: result.coords.longitude,
-						isSuccess: true
-					});
+					//纬度
+					ruleContext.setResult("latitude", result.coords.latitude);
+					//经度
+					ruleContext.setResult("longitude", result.coords.longitude);
+					ruleContext.setResult("isSuccess", true);
 				}
 				resolve();
 			}
 			var error = function (rs) {
 				if (ruleContext.setResult) {
-					ruleContext.setResult({
-						isSuccess: false
-					});
+					ruleContext.setResult("isSuccess", false);
 				}
 			}
 			var promise = vds.app.getCurrentPosition();

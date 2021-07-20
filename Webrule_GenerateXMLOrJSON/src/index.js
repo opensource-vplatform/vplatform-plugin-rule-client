@@ -1,11 +1,6 @@
 ﻿/**
- * 流程提交
+ * 配置数据生成
  */
-
-var scopeManager;
-exports.initModule = function (sBox) {
-	scopeManager = sBox.getService("vjs.framework.extension.platform.interface.scope.ScopeManager");
-}
 
 vds.import("vds.ds.*", "vds.expression.*", "vds.log.*", "vds.object.*", "vds.rpc.*", "vds.string.*");
 
@@ -36,24 +31,12 @@ var main = function (ruleContext) {
 			inParamsObj.datas = datas;
 			inParamsObj.rootName = rootName;
 
-			var inputParams = {
-				// ruleSetCode为活动集编号
-				"ruleSetCode": "CommonRule_GenerateXMLOrJSON",
-				// params为活动集输入参数
-				"params": {
-					"InParams": vds.string.toJson(inParamsObj)
-				}
-			};
-
 			// 调用完活动集之后的回调方法
 			var callback = function (responseObj) {
 				var outputMessage = responseObj.OutputMessage;
-				// 业务规则返回值
-				var businessRuleResult = {};
-				businessRuleResult.Data = outputMessage;
 				// 设置业务返回值
 				if (ruleContext.setResult) {
-					ruleContext.setResult(businessRuleResult);
+					ruleContext.setResult("Data", outputMessage);
 				}
 				resolve();
 			};
@@ -63,14 +46,14 @@ var main = function (ruleContext) {
 				"datas": [{
 					"code": "InParams",
 					"type": "char",
-					"value": inputParams.params.InParams
+					"value": vds.string.toJson(inParamsObj)
 				}],
 				"params": { "isAsyn": true, "ruleContext": ruleContext }
 			}
 
 			//调用后台活动集
-			var promise = vds.rpc.callCommand(sConfig.command, params.datas, params.params);
-			promise.then(callback);
+			var promise = vds.rpc.callCommand(sConfig.command, sConfig.datas, sConfig.params);
+			promise.then(callback).catch(reject);
 		} catch (ex) {
 			reject(ex);
 		}

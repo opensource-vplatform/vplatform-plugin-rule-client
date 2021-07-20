@@ -1,11 +1,9 @@
 ﻿/**
  *界面实体与物理表数据比较
- * shenxiangz
  *
- * 
  */
 
-vds.import("vds.object.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.ds.*");
+vds.import("vds.component.*", "vds.ds.*", "vds.expression.*", "vds.log.*", "vds.object.*", "vds.rpc.*", "vds.string.*", "vds.widget.*", "vds.window.*");
 
 // 规则主入口(必须有)
 var main = function (ruleContext) {
@@ -14,9 +12,6 @@ var main = function (ruleContext) {
 			// 当任何一条匹配数据不满足比较条件时，返回false，否则返回true(包括两种情况：不存在匹配数据或所有匹配数据都满足比较条件)；
 			var bussinessReturnValue = true;
 
-			var ruleCfg = ruleContext.getRuleCfg();
-			var ruleInstId = ruleCfg["ruleInstId"];// 规则ID
-			var routeRuntime = ruleContext.getRouteContext();
 			var params = ruleContext.getVplatformInput();
 			var srcDataSource = params["srcDataSource"];
 			var srcFilterCondition = params["srcFilterCondition"];
@@ -50,8 +45,7 @@ var main = function (ruleContext) {
 
 			// 源实体比较字段类型必须与目标实体比较字段类型兼容
 			var numberTypeArray = ["integer", "number"];
-			var srcCompareFieldType = getFieldByDataSource(srcDataSource,
-				srcCompareField).type;
+			var srcCompareFieldType = getFieldByDataSource(srcDataSource, srcCompareField).getType();
 
 			if (!vds.string.isInArray(srcCompareFieldType, numberTypeArray)) {
 				throw new Error("源实体比较字段必须为整数或数字类型，请检查配置！");
@@ -63,8 +57,7 @@ var main = function (ruleContext) {
 			var saveDataSource = result["saveDataSource"];
 			var mappings = result["mappings"];
 
-			if (vds.string.isEmpty(srcDataSource)
-				|| vds.string.isEmpty(destDataSource)) {
+			if (vds.string.isEmpty(srcDataSource) || vds.string.isEmpty(destDataSource)) {
 				throw new Error("源实体或物理表及查询不能为空，请检查配置！");
 			}
 
@@ -115,8 +108,9 @@ var main = function (ruleContext) {
 					var ds = vds.ds.lookup(saveDataSource);
 					ds.clear();
 				}
-				return true;
+				resolve();
 			}
+
 			var destQueryCond = {};
 			destQueryCond.srcDataSource = srcDataSource;
 			destQueryCond.destDataSource = destDataSource;
@@ -147,7 +141,7 @@ var main = function (ruleContext) {
 
 			var cloneCompareCondition = cloneObj(compareCondition);
 			var srcField = getFieldByDataSource(srcDataSource, srcCompareField);
-			cloneCompareCondition.srcColumnTypeName = srcField.type;
+			cloneCompareCondition.srcColumnTypeName = srcField.getType();
 			destQueryCond.compareCondition = cloneCompareCondition;
 
 			var callback = function (responseObj) {
@@ -155,10 +149,9 @@ var main = function (ruleContext) {
 				if (!success) {
 					vds.log.error("错误信息：" + result.msg);
 					throw new Error("数据比较执行异常！");
-
 				} else {
-					finalResultsValue = responseObj.CompareResults;
-					finalResults = vds.object.stringify(finalResultsValue);
+					var finalResultsValue = responseObj.CompareResults;
+					var finalResults = vds.object.stringify(finalResultsValue);
 					if (isSave) {
 						if (isClearSaveData) {
 							var ds = vds.ds.lookup(saveDataSource);
@@ -179,6 +172,7 @@ var main = function (ruleContext) {
 						bussinessReturnValue = false;
 
 					setBusinessRuleResult(ruleContext, bussinessReturnValue);
+					resolve();
 				}
 			};
 
@@ -193,9 +187,7 @@ var main = function (ruleContext) {
 			}
 			//  调用后台活动集
 			var promise = vds.rpc.callCommand(sConfig.command, sConfig.datas, sConfig.params);
-			promise.then(callback);
-
-			return true;
+			promise.then(callback).catch(reject);
 		} catch (ex) {
 			reject(ex);
 		}
@@ -204,9 +196,7 @@ var main = function (ruleContext) {
 
 function setBusinessRuleResult(ruleContext, result) {
 	if (ruleContext.setResult) {
-		ruleContext.setResult({
-			isMatchCompare: result
-		});
+		ruleContext.setResult("isMatchCompare", result);
 	}
 }
 
@@ -228,7 +218,7 @@ var validSaveMapping = function (isSave, mappings) {
 
 var cloneObj = function (obj) {
 	var clone = {};
-	for (prop in obj) {
+	for (var prop in obj) {
 		clone[prop] = obj[prop];
 	}
 	return clone;
@@ -241,15 +231,13 @@ var getFieldName = function (fieldName) {
 };
 
 var getCopyRecordsByMapping = function (dataSource, records, mappingFields) {
-	//		var emptyRecord=viewModel.getDataModule().createEmptyRecordByDS(dataSource);
 	var datasource = vds.ds.lookup(dataSource);
 	var emptyRecord = datasource.createRecord();
 
 	var copyRecords = [];
 	for (var i = 0; i < records.length; i++) {
-		//var obj=emptyRecord.createNew();
 		var tempRecord = emptyRecord.clone();
-		if (tempRecord.getMetadata().isContainField("id")) {
+		if (datasource.getMetadata().contains("id")) {
 			tempRecord.set("id", vds.string.uuid());
 		}
 		var obj = tempRecord;
@@ -267,7 +255,6 @@ var getCopyRecordsByMapping = function (dataSource, records, mappingFields) {
 };
 
 var getFieldByDataSource = function (dataSource, fieldName) {
-	//	      var fields=viewModel.getMetaModule().getMetadataFieldsByDS(dataSource);
 	var datasource = vds.ds.lookup(dataSource);
 	var metadata = datasource.getMetadata();
 	var fields = metadata.getFields();
@@ -275,10 +262,7 @@ var getFieldByDataSource = function (dataSource, fieldName) {
 	var field = null;
 	if (fields != null) {
 		for (var i = 0; i < fields.length; i++) {
-			var metaFieldName = fields[i].field;
-			if (metaFieldName == null)
-				metaFieldName = fields[i].code;
-
+			var metaFieldName = fields[i].getCode();
 			var b = fieldName.split(".");
 			if (metaFieldName == fieldName) {
 				field = fields[i];
@@ -299,7 +283,6 @@ var getFieldByDataSource = function (dataSource, fieldName) {
  */
 var getFilterRecords = function (dataSource, condition, ruleContext) {
 	var outputRecords = [];
-	//		var records = viewModel.getDataModule().getAllRecordsByDS(dataSource);
 	var datasource = vds.ds.lookup(dataSource);
 	var records = datasource.getAllRecords().toArray();
 
@@ -311,14 +294,12 @@ var getFilterRecords = function (dataSource, condition, ruleContext) {
 				resultData.push(record.toMap());
 			}
 		}
-		//			return viewModel.getDataModule().genDataMaps(records);
 		return resultData;
 	}
 
 	if (records && records.length > 0) {
 		for (var index = 0; index < records.length; index++) {
 			var record = records[index];
-			//var ret = formulaUtil.evalExpressionByRecords(condition, record);
 			var ret = vds.expression.execute(condition, { "ruleContext": ruleContext, "records": [record] });
 			if (typeof ret != "boolean") {
 				vds.log.error("条件必须返回布尔类型，请检查");

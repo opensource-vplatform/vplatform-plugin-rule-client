@@ -96,11 +96,10 @@ function setBusinessRuleResult(ruleContext, lon, lat) {
 		var success = true;
 		if (lon == null || lat == null)
 			success = false;
-		ruleContext.setResult({
-			isSuccess: success,
-			longitude: lon,
-			latitude: lat
-		});
+
+		ruleContext.setResult("isSuccess", success);
+		ruleContext.setResult("longitude", lon);
+		ruleContext.setResult("latitude", lat);
 	}
 }
 
@@ -148,7 +147,5 @@ var getDistance = function (lon1, lat1, lon2, lat2) {
 	var distance = 2 * EARTH_RADIUS * Math.asin(Math.sqrt(h));
 	return distance;
 }
-
-exports.main = main;
 
 export { main }

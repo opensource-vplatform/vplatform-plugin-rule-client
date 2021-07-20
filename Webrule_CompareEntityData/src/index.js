@@ -1,15 +1,8 @@
-/**
+﻿/**
  * 界面实体之间数据比较
- * shenxiangz
  */
 
-var pusher;
-
-exports.initModule = function (sBox) {
-	pusher = sBox.getService("vjs.framework.extension.platform.services.domain.datasource.DatasourcePusher");
-}
-
-vds.import("vds.object.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.ds.*");
+vds.import("vds.ds.*", "vds.expression.*", "vds.log.*", "vds.string.*");
 
 var main = function (ruleContext) {
 	return new Promise(function (resolve, reject) {
@@ -123,15 +116,15 @@ var main = function (ruleContext) {
 			if (srcDataSource == destDataSource && srcCompareField == destCompareField) {
 				throw new Error("源实体与目标实体相同时比较字段不能相同，请检查配置！");
 			}
-			var routeContext = ruleContext.getRouteContext()
-			var srcRecords = getFilterRecords(srcDataSource, srcFilterCondition, routeContext);
-			var destRecords = getFilterRecords(destDataSource, null, routeContext);
+			var srcRecords = getFilterRecords(srcDataSource, srcFilterCondition, ruleContext);
+			var destRecords = getFilterRecords(destDataSource, null, ruleContext);
 			if (srcRecords == null || srcRecords.length == 0 || destRecords == null || destRecords.length == 0) {
 				if (isSave && isClearSaveData) {
 					var ds = vds.ds.lookup(saveDataSource);
 					ds.clear();
 				}
 				setBusinessRuleResult(ruleContext, true);
+				resolve();
 				return true;
 			}
 
@@ -197,7 +190,7 @@ var main = function (ruleContext) {
 			}
 
 			if (isSave) {
-				if (isClearSaveData){
+				if (isClearSaveData) {
 					var ds = vds.ds.lookup(saveDataSource);
 					ds.clear();
 				}
@@ -215,8 +208,9 @@ var main = function (ruleContext) {
 				bussinessReturnValue = false;
 			setBusinessRuleResult(ruleContext, bussinessReturnValue);
 
-			return true;
+			resolve();
 
+			return true;
 		} catch (ex) {
 			reject(ex);
 		}
@@ -225,9 +219,7 @@ var main = function (ruleContext) {
 
 function setBusinessRuleResult(ruleContext, result) {
 	if (ruleContext.setResult) {
-		ruleContext.setResult({
-			isMatchCompare: result
-		});
+		ruleContext.setResult("isMatchCompare", result);
 	}
 }
 
@@ -242,14 +234,14 @@ var getDestGroupKeyStr = function (srcGroupKeyStr, matchFields) {
 var combineTwoRecord = function (srcDataSource, srcRecord, destDataSource, destRecord) {
 	var newRecord = {};
 	var fields = "";
-	for (field1 in srcRecord) {
+	for (var field1 in srcRecord) {
 		var fieldName = field1;
 		if (field1.indexOf(".") < 0)
 			fieldName = srcDataSource + "." + field1;
 		newRecord[fieldName] = srcRecord[field1];
 		fields += fieldName + ","
 	}
-	for (field2 in destRecord) {
+	for (var field2 in destRecord) {
 		var fieldName = field2;
 		if (field2.indexOf(".") < 0)
 			fieldName = destDataSource + "." + field2;
@@ -285,16 +277,13 @@ var getFieldTypeByDataSource = function (dataSource, fieldName) {
 	var fields = metadata.getFields();
 	if (fields != null) {
 		for (var i = 0; i < fields.length; i++) {
-			var metaFieldName = fields[i].field;
-			if (metaFieldName == null)
-				metaFieldName = fields[i].code;
-
+			var metaFieldName = fields[i].getCode();
 			var b = fieldName.split(".");
 			if (metaFieldName == fieldName) {
-				return fields[i].type;
+				return fields[i].getType();
 			}
 			if (b.length == 2 && metaFieldName == b[1]) {
-				return fields[i].type;
+				return fields[i].getType();
 			}
 		}
 	}
@@ -376,19 +365,17 @@ var getGroupValueStr = function (record, groupFieldNames) {
 /**
  *	根据源实体名称及拷贝类型来获取要拷贝的行数据
  *  @param	dataSource	源实体名称
- *  @param	condition		    源实体条件
+ *  @param	condition	源实体条件
  */
-var getFilterRecords = function (dataSource, condition, routeContext) {
+var getFilterRecords = function (dataSource, condition, ruleContext) {
 	var outputRecords = [];
 	var datasource = vds.ds.lookup(dataSource);
 	var records = datasource.getAllRecords();
 	if (records)
 		records = records.toArray();
 	if (condition == null || condition == "")
-		//return viewModel.getDataModule().genDataMaps(records);
 		return _genDataMaps(records);
 	if (records && records.length > 0) {
-		var retRecords = [];
 		for (var index = 0; index < records.length; index++) {
 			var record = records[index];
 			var ret = vds.expression.execute(condition, { "ruleContext": ruleContext, "records": [record] });
