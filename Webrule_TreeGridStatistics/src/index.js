@@ -30,28 +30,21 @@ var main = function (ruleContext) {
                 var newResult = ruleArgs[0]["newRecord"];
                 var oldResult = ruleArgs[0]["oldRecord"];
                 if (newResult) {
-                    var newIterate = newResult.iterate;
-                    while(newIterate.hasNext()){
-                        var record = newIterate.next();
+                    newResult.iterate(function(record){
                         if (oldResult) {
-                            var oldIterart = oldResult.iterate;
-                            while(oldIterart.hasNext()){
-                                var oRecord = oldIterart.next();
+                            oldResult.iterate(function(oRecord){
                                 if (record.getSysId() == oRecord.getSysId()) {
                                     _newFuntion(oRecord, record, operator, tableName, fieldNames, treeStruct);
                                 }
-                            }
+                            });
                         } else {
                             _newFuntion(null, record, operator, tableName, fieldNames, treeStruct);
                         }
-                    }
+                    });
                 } else if ("delete" == operator) {
-
-
                     oldResult.iterate(function (record) {
                         _newFuntion(record, null, operator, tableName, fieldNames, treeStruct);
                     });
-
                 }
             } else {
                 var tree = vds.tree.lookup(tableName, treeStruct[0]);

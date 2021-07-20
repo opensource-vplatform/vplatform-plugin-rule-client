@@ -36,7 +36,7 @@ var main = function (ruleContext) {
 					}
 					resolve();
 				}
-				var promise = vds.rpc.command("FileCertImage", [], {
+				var promise = vds.rpc.callCommand("FileCertImage", [], {
 					"isAsync": false,
 					"isRuleSetCode": false
 				});
@@ -44,7 +44,7 @@ var main = function (ruleContext) {
 					if (datas && datas.success) {
 						success();
 					} else {
-						var promise = vds.message.error("生成验证码失败" + (datas.msg ? ", 错误信息：" + datas.msg : ""),);
+						var promise = vds.message.error("生成验证码失败" + (datas.msg ? ", 错误信息：" + datas.msg : ""));
 						promise.then(resolve).catch(reject);
 					}
 				}).catch(reject);

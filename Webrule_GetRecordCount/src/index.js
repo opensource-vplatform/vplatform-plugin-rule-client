@@ -52,12 +52,10 @@ var main = function (ruleContext) {
 			};
 			//  调用后台活动集
 			var promise = vds.rpc.callCommand("CommonRule_GetRecordCount", [{
-				"paramName": "InParams",
-				"paramType": "char",
-				"paramValue": vds.string.toJson(inParamsObj)
-			}], {
-				"isAsync": true
-			});
+				"code": "InParams",
+				"type": "char",
+				"value": vds.string.toJson(inParamsObj)
+			}]);
 			promise.then(callback).catch(errorCallback);
 		} catch (err) {
 			reject(err);

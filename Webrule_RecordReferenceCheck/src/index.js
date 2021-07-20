@@ -56,7 +56,7 @@ var main = function (ruleContext) {
 					});
 				}
 			}
-			w.addOrConditions(orConds);
+			w.addOrConditions(orConds, w.NodeType.EQ);
 
 			var condition = inParamObj.Condition;
 			if (undefined != condition && null != condition && condition.length > 0) {
@@ -80,10 +80,10 @@ var main = function (ruleContext) {
 					reject(vds.exception.newSystemException("记录引用检查执行异常！" + result));
 				};
 				errorCallback = ruleContext.genAsynCallback(errorCallback);
-				var promise = vds.rpc.command("CommonRule_RecordReferenceCheck",[{
+				var promise = vds.rpc.callCommand("CommonRule_RecordReferenceCheck",[{
 					"code": "InParams",
 					"type": "char",
-					"value": vds.string.toJon(params)
+					"value": vds.string.toJson(params)
 				}], {
 					"isAsync": true,
 				});
