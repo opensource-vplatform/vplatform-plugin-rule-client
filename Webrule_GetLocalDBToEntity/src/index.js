@@ -55,9 +55,6 @@ var main = function (ruleContext) {
                     // 处理动态加载数据
                     var dynamicLoadCallBackFunc = (function (d, flag) {
                         return function () {
-                            queryParam.dataAccessObjects[0].command.config.depth = dynamicLoad;//???
-                            queryParam.dataAccessObjects[0].command.config.whereToWhere = whereRestrict.toWhere();
-                            queryParam.dataAccessObjects[0].command.config.whereRestrictNoDepthFilter = whereRestrictNoDepthFilter;
                             //给方法变量赋值  (开发系统暂时没有分页配置逻辑，后期考虑)
                             if (undefined != totalRecordSave && null != totalRecordSave && totalRecordSave.length > 0) {
                                 handlePagingLogic(totalRecordSave, ruleContext, entityName, targetModelType);
@@ -172,7 +169,6 @@ var main = function (ruleContext) {
                             whereRestrictNoDepthFilter.addOrderBy(orderByField, orderType);
                         }
                     }
-                    var queryParam = {}
                     var newFieldMappings = [];
                     for (var j = 0, _l = mappings.length; j < _l; j++) {
                         var _map = mappings[j];
@@ -181,12 +177,12 @@ var main = function (ruleContext) {
                             field = field.split(".")[1];
                         }
                         newFieldMappings.push({
-                            "code": local,
+                            "code": field,
                             "type": _map["type"] == "entityField" ? "field" : "expression",
                             "value": _map["sourceName"]
                         })
                     }
-                    var destEntity = getDatasource(targetModelName, targetModelType, ruleContext.getMethodContext());
+                    var destEntity = getDatasource(entityName, targetModelType, ruleContext.getMethodContext());
                     var promise = vds.rpc.queryData(sourceName, queryType, destEntity, newFieldMappings, {
                         "where": whereRestrict,
                         "pageConfig": {
@@ -424,25 +420,6 @@ var getDsName = function (widgetCode) {
     return dsNames[0];
 }
 
-
-var sandBox, jsonUtil, WhereRestrict, ExpressionContext, engine, queryConditionUtil, windowVMMappingManager, widgetContext,
-    DatasourceManager, windowParam, dataAdapter, scopeManager;
-
-exports.initModule = function (sBox) {
-    sandBox = sBox;
-    jsonUtil = sBox.getService("vjs.framework.extension.util.JsonUtil");
-    WhereRestrict = sBox.getService("vjs.framework.extension.platform.services.where.restrict.WhereRestrict");
-    ExpressionContext = sBox.getService("vjs.framework.extension.platform.services.engine.expression.ExpressionContext");
-    engine = sBox.getService("vjs.framework.extension.platform.services.engine.expression.ExpressionEngine");
-    queryConditionUtil = sBox.getService("vjs.framework.extension.platform.services.where.restrict.QueryCondUtil");
-    windowVMMappingManager = sBox.getService("vjs.framework.extension.platform.services.vmmapping.manager.WindowVMMappingManager");
-    widgetContext = sBox.getService("vjs.framework.extension.platform.services.view.widget.common.context.WidgetContext");
-    DatasourceManager = sBox.getService("vjs.framework.extension.platform.services.model.manager.datasource.DatasourceManager");
-    windowParam = sBox.getService("vjs.framework.extension.platform.services.param.manager.WindowParam");
-    dataAdapter = sBox.getService("vjs.framework.extension.platform.services.viewmodel.dataadapter.DataAdapter");
-    scopeManager = sBox.getService("vjs.framework.extension.platform.interface.scope.ScopeManager");
-    datasourceManager = sBox.getService("vjs.framework.extension.platform.services.model.manager.datasource.DatasourceManager");
-};
 /**
  * 控件与规则排序信息汇总
  * @param {*} orderByCfg 

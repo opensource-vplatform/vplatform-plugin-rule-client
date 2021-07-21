@@ -22,6 +22,12 @@ var main = function (ruleContext) {
 				var inputParam = inParamObj.inputParams[0];
 				if (inputParam.paramCode == "lightenessValue" && inputParam.paramType == "expression") {
 					var lightnessValue = expressFunc(inputParam.paramValue, ruleContext);
+					lightnessValue = Number(lightnessValue);
+					if(isNaN(lightnessValue)){
+						vds.log.error("亮度参数值无效："+lightnessValue);
+						resolve();
+						return;
+					}
 					vds.app.setScreenBrightness(lightnessValue);
 				} else {
 					//TODO 抛出“无效参数”异常
@@ -38,7 +44,8 @@ var main = function (ruleContext) {
 					vds.log.error("执行getGPSStatus发生错误。" + message);
 					resolve();
 				}
-				vds.app.getGPSStatus(success, error);
+				var promise = vds.app.getGPSStatus();
+				promise.then(success).catch(error);
 			} else if (inParamObj.operationType == "getBluetoothOpenstate") {
 				_finish = false;
 				var success = function (s) {
@@ -59,7 +66,8 @@ var main = function (ruleContext) {
 					vds.log.error("执行getBluetoothStatus发生错误。" + message);
 					resolve();
 				}
-				vds.app.getBluetoothStatus(success, error);
+				var promise = vds.app.getBluetoothStatus();
+				promise.then(success).catch(error);
 			} else if (inParamObj.operationType == "getCurrentNetworkstatus") {
 				_finish = false;
 				var success = function (s) {
@@ -80,10 +88,11 @@ var main = function (ruleContext) {
 				}
 				var error = function (message) {
 					//TODO 异常处理
-					vds.log.error("执行getNetworkState发生错误。" + message);
+					vds.log.error("执行getNetworkStatus发生错误。" + message);
 					resolve();
 				}
-				vds, app.getNetworkState(success, error);
+				var promise = vds.app.getNetworkStatus();
+				promise.then(success).catch(error);
 			} else if (inParamObj.operationType == "setShock") {
 				var inputParam = inParamObj.inputParams[0];
 				if (inputParam.paramCode == "shockSeconds" && inputParam.paramType == "expression") {
