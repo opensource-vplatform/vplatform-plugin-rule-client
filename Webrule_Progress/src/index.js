@@ -1,7 +1,7 @@
 /**
  *	进度条显示/隐藏
  */
-vds.import("vds.progress.*", "vds.environment.*");
+vds.import("vds.environment.*","vds.expression.*","vds.progress.*")
 /**
  * 规则入口
  */
