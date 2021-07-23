@@ -28,6 +28,7 @@ var main = function (ruleContext) {
 			//如果要检查的数据源当前没有选中行，则检查通过，业务返回值为false[表示没有被引用]
 			if (!rows || rows.length == 0) {
 				setResult(ruleContext, false);
+				resolve();
 				return true;
 			}
 			var methodContext = ruleContext.getMethodContext();
