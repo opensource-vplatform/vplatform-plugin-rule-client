@@ -12,6 +12,8 @@ var main = function (ruleContext) {
 			var inParamObj = ruleContext.getVplatformInput();
 			if (!inParamObj) { //建议兼容
 				inParamObj = "";
+			}else{
+				inParamObj = inParamObj.dataSourceMap[0];
 			}
 			inParamObj.count = inParamObj.count ? experssFunc(inParamObj.count) : inParamObj.count;
 			inParamObj.isFront = inParamObj.isFront ? experssFunc(inParamObj.isFront) : inParamObj.isFront;
@@ -35,7 +37,6 @@ var main = function (ruleContext) {
 			} else {
 				upload2Server(ruleContext, inParamObj, resolve, reject);
 			}
-			resolve();
 		} catch (err) {
 			reject(err);
 		}
@@ -70,12 +71,12 @@ var uploadFromFilePath = function (ruleContext, inParamObj, resolve, reject) {
 		reject(vds.exception.newConfigException("请检查实体" + sEntityCode + "是否存在"));
 		return;
 	}
-	var datas = sDataSource.getAllRecords().datas;//???
+	var datas = sDataSource.getAllRecords().toArray();//???
 	if (datas.length > 0) {
 		var filePaths = [];
 		for (var i = 0; i < datas.length; i++) {
 			var data = datas[i];
-			var fPath = data[sFieldCode];
+			var fPath = data.get(sFieldCode);
 			if (fPath && fPath.indexOf("file://") != -1) {
 				fPath = fPath.substring(fPath.indexOf("file://") + 7, fPath.length);
 				filePaths.push(fPath);
@@ -103,11 +104,12 @@ var uploadFromFilePath = function (ruleContext, inParamObj, resolve, reject) {
 			resolve();
 		}
 		uploadSuccess = ruleContext.genAsynCallback(uploadSuccess);
-		var promise = vds.app.upload(filePaths, uploadSuccess);
-		promise.then(uploadSuccess).catch(function () {
-			setResult(ruleContext, false);
-			reject(vds.exception.newBusinessException("上传图片不成功"));
-		});
+		vds.app.upload(filePaths, uploadSuccess);
+		// var promise = vds.app.upload(filePaths, uploadSuccess);
+		// promise.then(uploadSuccess).catch(function () {
+		// 	setResult(ruleContext, false);
+		// 	reject(vds.exception.newBusinessException("上传图片不成功"));
+		// });
 	} else {
 		setResult(ruleContext, true);
 		resolve();
@@ -149,7 +151,6 @@ var uploadFromUserSelect = function (ruleContext, inParamObj, resolve, reject) {
 			if (imagePath && imagePath.length > 0) {
 				//上传后的回调,设置规则返回值
 				var uploadSuccess = function (fileIds) {
-					var fileIds = results;
 					if (fileIds) {
 						var insertRecords = [];
 						for (var i = 0; i < fileIds.length; i++) {
@@ -166,8 +167,9 @@ var uploadFromUserSelect = function (ruleContext, inParamObj, resolve, reject) {
 				if (valueCode == "picture") {
 					imagePath = StringToArray(imagePath);
 				}
-				var promise = vds.app.upload(imagePath, uploadSuccess);
-				promise.then(uploadSuccess).catch(FailCallBack)
+				vds.app.upload(imagePath, uploadSuccess);
+				//var promise = vds.app.upload(imagePath, uploadSuccess);
+				//promise.then(uploadSuccess).catch(FailCallBack)
 			} else {
 				setResult(ruleContext, false);
 				resolve();
@@ -229,6 +231,7 @@ var save2Native = function (ruleContext, inParamObj, resolve, reject) {
 			if (imagePath && imagePath.length > 0) {
 				//上传后的回调,设置规则返回值
 				var uploadSuccess = function (results) {
+					alert(5);
 					if (results && undefined != results.success && (results.success == false || results.success == "false")) {
 						setResult(ruleContext, false);
 						reject(vds.exception.newConfigException("上传图片不成功"));
@@ -270,15 +273,18 @@ var save2Native = function (ruleContext, inParamObj, resolve, reject) {
 		if (valueCode == "cancle") {
 			removeDailog();
 			setResult(ruleContext, false);
+			resolve();
 			return;
 		} else if (valueCode == "picture") {
 			options.isFront = inParamObj.isFront === true;
 			options.saveToAlbum = inParamObj.saveToAlbum === true;
-			vds.app.picture(SuncceccCallBack, FailCallBack, options);
+			var promise = vds.app.picture(options);
+			promise.then(SuncceccCallBack).catch(FailCallBack);
 		} else if (valueCode == "album") {
 			/*设置相册最大选择数量*/
 			options["max"] = inParamObj.count;
-			vds.app.getPicture(SuncceccCallBack, FailCallBack, options);
+			var promise = vds.app.getPicture(options);
+			promise.then(SuncceccCallBack).catch(FailCallBack);
 		} else {
 			removeDailog();
 			setResult(ruleContext, false);
@@ -301,6 +307,7 @@ var save2App = function (sourceFilePath, callback, resolve) {
 	for (var i = 0; i < sourceFilePath.length; i++) {
 		var fPath = sourceFilePath[i];
 		var fileName = getFileName(fPath);
+		var fileURL;
 		if (window.device && window.device.platform == "iOS") {
 			fileURL = cordova.file.documentsDirectory + "appimage/" + fileName;
 		} else {
@@ -308,29 +315,33 @@ var save2App = function (sourceFilePath, callback, resolve) {
 		}
 		var fileTransfer = new FileTransfer();
 		var uri = encodeURI(fPath);
-		fileTransfer.download(
-			uri,
-			fileURL,
-			function (entry) {
-				results.push(entry.nativeURL);
-				fileIndex++;
-				if (fileIndex == sourceFilePath.length) {
+		alert(fileURL + "@@@" + typeof(fileTransfer.download));
+		try{
+			fileTransfer.download(uri, fileURL, function (entry) {
+					alert(1 + ",entry: " + entry== null);
+					results.push(entry.nativeURL);
+					fileIndex++;
 					vds.progress.hideProgress();
-					callback(results);
-				} else {
-					resolve();
+					if (fileIndex == sourceFilePath.length) {
+						alert(2);
+						callback(results);
+					} else {
+						alert(3);
+						resolve();
+					}
+				},function (error) {
+					alert(4);
+					vds.progress.hideProgress();
+					alert("保存失败");
+					callback(error);
+				}, false, {
+				"headers": {
+					"Authorization": "Basic dGVzdHVzZXJuYW1lOnRlc3RwYXNzd29yZA=="
 				}
-			},
-			function (error) {
-				vds.progress.hideProgress();
-				alert("保存失败");
-				callback(error);
-			},
-			false, {
-			headers: {
-				"Authorization": "Basic dGVzdHVzZXJuYW1lOnRlc3RwYXNzd29yZA=="
-			}
-		});
+			});
+		}catch(e){
+			alert(e.message);
+		}
 	}
 }
 

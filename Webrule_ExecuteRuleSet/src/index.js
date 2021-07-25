@@ -8,7 +8,7 @@
  *  2，执行loacal活动集时，直接调用前端框架API executeRoute。
  *  3，执行api/extensionPoint活动集时，表示构件间通信，则从服务中介Mediator调用对应活动集。
  */
-//vds.import("vds.");
+ vds.import("vds.exception.*","vds.expression.*","vds.component.*","vds.method.*","vds.ds.*","vds.window.*","vds.log.*","vds.string.*","vds.widget.*");
 /**
  * 规则入口
  */
@@ -67,7 +67,6 @@ var main = function (ruleContext) {
 					// 	isActionListNormalWork = setOutputFunc(resultFromExeRuleSet);
 					// }
 					setOutputFunc(resultFromExeRuleSet);
-					return isActionListNormalWork;
 				}
 				//TODO xiedh
 				//ruleContext.setRuleCallbackFireFlag(true);
@@ -86,7 +85,7 @@ var main = function (ruleContext) {
 				// config["parentRouteContext"] = parentRouteContext;
 				// config["currentRouteContext"] = currRouteRuntime;
 				// config["callback"] = callback;
-				parseParam = ruleContext.genAsynCallback(parseParam);
+				var _parseParam = ruleContext.genAsynCallback(parseParam);
 				if (invokeType == "api") {
 					//获取构件包
 					var promise = vds.component.getPack(componentCode, ruleSetCode);
@@ -97,7 +96,7 @@ var main = function (ruleContext) {
 							_componentCode = mappings.componentCode;
 							_ruleSetCode = mappings.funcCode;
 						}
-						var inputParam = parseParam(invokeParams, _componentCode, windowCode, _ruleSetCode, sourceType, ruleContext);
+						var inputParam = _parseParam(invokeParams, _componentCode, windowCode, _ruleSetCode, sourceType, ruleContext);
 						var promise = vds.method.execute(_ruleSetCode, {
 							"componentCode": _componentCode,
 							"windowCode": windowCode,
@@ -112,7 +111,7 @@ var main = function (ruleContext) {
 					}).catch(reject);
 				} else {
 					var epConditionParams = getEpConditionParams(inParamsObj.epConditionParam, ruleContext);
-					var inputParam = parseParam(invokeParams, componentCode, windowCode, ruleSetCode, sourceType, ruleContext);
+					var inputParam = _parseParam(invokeParams, componentCode, windowCode, ruleSetCode, sourceType, ruleContext);
 					var promise = vds.method.execute(ruleSetCode, {
 						"componentCode": componentCode,
 						"windowCode": windowCode,
@@ -122,7 +121,7 @@ var main = function (ruleContext) {
 						"inputParam": inputParam,
 						"instanceIds": instanceRefs,
 						"isParallelism": isRuleAsyn,
-						"epParams":epConditionParams
+						"epParams": epConditionParams
 					});
 					promise.then(callback).catch(reject);
 				}
@@ -140,16 +139,10 @@ var main = function (ruleContext) {
 		}
 	});
 }
-
-var dbService;
-
-exports.initModule = function (sBox) {
-	dbService = sBox.getService("vjs.framework.extension.platform.services.view.logic.datasource.DatasourceUtil");
-}
 var _setOutputFunc = function (returnMapping, ruleContext, routeContext, resolve, reject) {
 	var callback = function (resultFromExeRuleSet, epImpInfo) {
 		try {
-			if (returnMapping && returnMapping.length > 0) {
+			if (returnMapping && returnMapping.length > 0 && resultFromExeRuleSet) {
 				// var tmpAllComponentVar = [];
 				for (var i = 0; i < returnMapping.length; i++) {
 					// var tmpSimpleComponent = {};
@@ -188,8 +181,21 @@ var _setOutputFunc = function (returnMapping, ruleContext, routeContext, resolve
 					 * 如果目标是实体类型时，走dbService.insertOrUpdateRecords2Entity，如果是其他类型，则走原来直接赋值的逻辑<br>
 					 * 原来case "entity"分支，由于目标是实体类型，所以已经抽到dbService.insertOrUpdateRecords2Entity中实现，所以在else分支中删除该逻辑<br>
 					 */
-					if (dbService.isEntity(dest, destType, ruleContext)) {
+					var _info = _getInfo(dest, destType, ruleContext.getMethodContext());
+					if (_info.isEntity) {
+						var targetDs = _info.ds;
 						var destFieldMapping = mapping["destFieldMapping"];
+						var newMappings = [];
+						if (destFieldMapping) {
+							var newMappings = [];
+							for (var j = 0, len = destFieldMapping.length; j < len; j++) {
+								newMappings.push({
+									"code": destFieldMapping[j]["destField"],
+									"type": destFieldMapping[j]["srcValueType"],
+									"value": destFieldMapping[j]["srcValue"]
+								})
+							}
+						}
 						var updateDestEntityMethod = mapping["updateDestEntityMethod"];
 						if (updateDestEntityMethod == null) {
 							updateDestEntityMethod = "insertOrUpdateBySameId";
@@ -216,7 +222,26 @@ var _setOutputFunc = function (returnMapping, ruleContext, routeContext, resolve
 							}
 							srcRecords = value.getAllRecords();
 						}
-						dbService.insertOrUpdateRecords2Entity(dest, destType, srcRecords, destFieldMapping, updateDestEntityMethod, isCleanDestEntityData, ruleContext, extraParams);
+						var isClear = false;
+						var mergeType;
+						switch (updateDestEntityMethod) {
+							case "loadRecord":
+								mergeType = vds.ds.MergeType.Load;
+								isClear = true;
+								break;
+							case "updateRecord":
+								mergeType = vds.ds.MergeType.Update;
+								break;
+							default:
+								mergeType = vds.ds.MergeType.InsertOrUpdate;
+								isClear = isCleanDestEntityData;
+								break;
+						}
+						vds.ds.merge(targetDs, srcRecords, newMappings, mergeType, ruleContext.getMethodContext(), {
+							"isClear": isClear,
+							"extraParams": extraParams
+						});
+						// vds.ds.merge(targetDs, srcRecords, destFieldMapping, updateDestEntityMethod, isCleanDestEntityData, ruleContext, extraParams);
 					} else {
 						switch (destType) {
 							case "windowVariant":
@@ -266,12 +291,64 @@ var _setOutputFunc = function (returnMapping, ruleContext, routeContext, resolve
 			// }
 			// setResult(ruleContext, "isActionListNormalWork", isActionListNormalWork);
 			resolve();
-			return isActionListNormalWork;
 		} catch (error) {
 			reject(error);
 		}
 	};
 	return ruleContext.genAsynCallback(callback);
+}
+
+var _getInfo = function (entityName, entityType, methodContext) {
+	var info = {
+		isEntity: false,
+		ds: null,
+	}
+	// 界面实体：开发系统中，有的规则用entity有的规则用window，此处做兼容
+	if (entityType == "entity" || entityType == "window") {
+		info.isEntity = true;
+		info.ds = vds.ds.lookup(entityName);
+	}
+	// 窗体输入变量：开发系统中，有的规则用windowVariant有的规则用windowInput，此处做兼容
+	else if (entityType == "windowVariant" || entityType == "windowInput") {
+		var input = vds.window.getInputType(entityName);
+		if (input == "entity") {
+			info.isEntity = true;
+			info.ds = vds.window.getInput(entityName);
+		}
+	}
+	// 窗体输出变量
+	else if (entityType == "windowOutput") {
+		var output = vds.window.getOutputType(entityName);
+		if (output == "entity") {
+			info.isEntity = true;
+			info.ds = vds.window.getOutput(entityName);
+		}
+	}
+	// 方法输入变量
+	else if (entityType == "ruleSetInput") {
+		var varType = methodContext.getInputType(entityName);
+		if (varType == "entity") {
+			info.isEntity = true;
+			info.ds = methodContext.getInput(entityName);
+		}
+	}
+	// 方法输出变量
+	else if (entityType == "ruleSetOutput") {
+		var varType = methodContext.getOutputType(entityName);
+		if (varType == "entity") {
+			info.isEntity = true;
+			info.ds = methodContext.getOutput(entityName);
+		}
+	}
+	// 方法变量：开发系统中，有的规则用ruleSetVariant有的规则用ruleSetVar，此处做兼容
+	else if (entityType == "ruleSetVariant" || entityType == "ruleSetVar") {
+		var varType = methodContext.getVariableType(entityName);
+		if (varType == "entity") {
+			info.isEntity = true;
+			info.ds = methodContext.getVariable(entityName);
+		}
+	}
+	return info;
 }
 
 // var _fireRouteCallback = function (ruleContext, isRuleAsyn, resolve) {
@@ -312,9 +389,9 @@ var getFreeDB = function (fieldsMapping) {
 	// 	}
 	// };
 	var json = {
-		"dsCode":freeDBName
+		"dsCode": freeDBName
 	}
-	return vds.ds.unSerialize(fields,json);
+	return vds.ds.unSerialize(fields, json);
 }
 /**
  * 解析扩展点条件参数
@@ -348,16 +425,10 @@ var parseParam = function (invokeParams, componentCode, windowCode, ruleSetCode,
 	//获取活动集配置
 	var ruleSetConfig;
 	if (windowCode) {
-		ruleSetConfig = vds.method.get(ruleSetCode, {
-			"componentCode": componentCode,
-			"windowCode": windowCode
-		});
+		ruleSetConfig = vds.method.get(ruleSetCode, componentCode, windowCode);
 	} else {
 		// var componentRoute = sandBox.getService("vjs.framework.extension.platform.data.storage.schema.route.ComponentRoute");
-		ruleSetConfig = vds.method.get(ruleSetCode, {
-			"componentCode": componentCode
-			// "routeCode": ruleSetCode
-		});
+		ruleSetConfig = vds.method.get(ruleSetCode, componentCode);
 	}
 	for (var i = 0; invokeParams != null && i < invokeParams.length; i++) {
 		var invokeObj = invokeParams[i];
@@ -445,11 +516,17 @@ var parseParam = function (invokeParams, componentCode, windowCode, ruleSetCode,
 			}
 
 			if (srcDB) {
+				var _mappings = [];
+				for (var j = 0; j < paramFieldMapping.length; j++) {
+					var fMapping = paramFieldMapping[j];
+					_mappings.push({
+						"sourceValue":fMapping["fieldValue"],
+						"type":fMapping["fieldValueType"],
+						"destField":fMapping["paramEntityField"]
+					});
+				}
 				// datasourcePusher.copyBetweenEntities({
-				vds.ds.copy({
-					"sourceEntity": srcDB,
-					"destEntity": freeDB,
-					"valuesMapping": paramFieldMapping,
+				vds.ds.copy(srcDB, freeDB, _mappings,{
 					"dataFilterType": dataFilterType,
 					"context": methodContext
 				});
@@ -497,23 +574,23 @@ var setWidgetValue = function (destWidgetId, value) {
 		vds.widget.execute(widgetCode, "setValue", [value]);
 	} else {
 		// widgetDatasource.setSingleValue(widgetCode, value);
-		var datasourceNames = vds.widget.getDatasourceCodes(widgetId);
+		var datasourceNames = vds.widget.getDatasourceCodes(widgetCode);
 		if (!datasourceNames) {
 			return;
 		}
 		if (datasourceNames.length > 1) {
-			throw vds.exception.newConfigException("获取控件【" + widgetId + "】数据源失败！原因：控件绑定了多个数据源，但又没指定获取哪个数据源");
+			throw vds.exception.newConfigException("获取控件【" + widgetCode + "】数据源失败！原因：控件绑定了多个数据源，但又没指定获取哪个数据源");
 		}
 		var datasourceName = datasourceNames[0];
 		var datasource = vds.ds.lookup(datasourceName);
-		// var datasource = getBindDatasource(widgetId);
-		// var fields = getBindDatasourceFields(widgetId);
-		var fields = vds.widget.getFieldCodes(widgetId, datasourceName);
+		// var datasource = getBindDatasource(widgetCode);
+		// var fields = getBindDatasourceFields(widgetCode);
+		var fields = vds.widget.getFieldCodes(datasourceName, widgetCode);
 		if (fields.length > 1)
-			throw new Error("接口调用错误，控件【" + widgetId + "】绑定了多个字段！");
+			throw new Error("接口调用错误，控件【" + widgetCode + "】绑定了多个字段！");
 		var field = fields[0];
 		if (datasource == null || fields.length < 1) {
-			vds.widget.execute(widgetId, "setValue", value);
+			vds.widget.execute(widgetCode, "setValue", value);
 		} else {
 			var record = datasource.getCurrentRecord();
 			if (!record) {
