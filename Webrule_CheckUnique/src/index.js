@@ -1,14 +1,8 @@
 ﻿/**
- * 唯一性检查
+ * 前后台唯一性检查
  */
 
-var dataQuery;
-
-exports.initModule = function (sBox) {
-    dataQuery = sBox.getService("vjs.framework.extension.platform.services.repository.query");
-}
-
-vds.import("vds.object.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.ds.*");
+vds.import("vds.ds.*", "vds.object.*", "vds.rpc.*", "vds.string.*", "vds.widget.*");
 
 var main = function (ruleContext) {
     return new Promise(function (resolve, reject) {
@@ -19,86 +13,34 @@ var main = function (ruleContext) {
             var checkFields = ruleConfig.checkFields;
             var isAutoSelectRepeatRow = ruleConfig.isAutoSelectRepeatRow;
             // 前台检查
-            // var isRepeat = _checkEntityUnique(entityName, checkFields, isAutoSelectRepeatRow);
-            var isRepeat = _checkEntityUnique_other(entityName, checkFields, isAutoSelectRepeatRow);
+            var isRepeat = checkEntityUnique(entityName, checkFields, isAutoSelectRepeatRow);
             // 后台检查
             // 如果前台已经检查出重复，则不需要再检查后台
             if (isBackgroudCheck == true && isRepeat == false) {
                 var tableName = ruleConfig.tableName;
                 var dsWhere = ruleConfig.dsWhere;
-                isRepeat = _checkTableUnique(entityName, tableName, checkFields, dsWhere, isAutoSelectRepeatRow, ruleContext);
+                checkTableUnique(entityName, tableName, checkFields, dsWhere, isAutoSelectRepeatRow, ruleContext, resolve, reject);
             }
-
-            if (ruleContext.setResult) {
-                ruleContext.setResult({
-                    isUnique: !isRepeat
-                });
+            else {
+                setResult(ruleContext, isRepeat, resolve);
             }
         } catch (ex) {
             reject(ex);
         }
     });
-}
-var _checkMutilList = function (dataName) {
-    var widgetId = vds.widget.getWidgetCodes(dataName);
-    var type = vds.widget.getType(widgetId);
-    if ("JGBizCodeTreeGrid" == type || "JGBizCodeTreeView" == type || "JGDataGrid" == type || "JGTreeGrid" == type || "JGTreeView" == type) {
-        var displayMode = vds.widget.getProperty(widgetId, "DisplayMode");
-        if (displayMode) {
+};
 
-        }
+/** 设置规则返回值 */
+var setResult = function (ruleContext, isRepeat, resolve) {
+    if (ruleContext.setResult) {
+        ruleContext.setResult("isUnique", !isRepeat);
     }
-    return false;
-}
-// 检查前台实体是否有重复数据
-var _checkEntityUnique = function (entityName, checkFields, isAutoSelectRepeatRow) {
-    var isRepeat = false;
-    var recordObjectCache = {};
-    var datasource = vds.ds.lookup(entityName);
-    var records = datasource.getAllRecords().toArray();
-    var needRecord = [];
-    var recordIndex = 0;
-    for (var i = 0; i < records.length; i++) {
-        var record = records[i];
-        var recordValueCache = ""
-        for (var j = 0; j < checkFields.length; j++) {
-            //              _checkMutilList();
-            // 获取并转换字段值，将字段值存入缓存字符串中
-            var checkField = checkFields[j].entityFiled;
-            checkField = _getFieldCode(checkField);
-            var fieldValue = record.get(checkField);
-
-            // 转换字段值，如：code="" 转换为>> code为空
-            fieldValue = _convertFieldValue(fieldValue);
-            // 如果同时检查多个字段，则把字段值用逗号拼装起来，如：id="123",code="abc"
-            recordValueCache = _convertCacheValue(recordValueCache, checkField, fieldValue);
-        }
-        if (undefined != recordObjectCache[recordValueCache] || null != recordObjectCache[recordValueCache]) {
-            // 如果是第一条找到的重复数据，则把重复行设置为当前行
-            if (isRepeat == false && isAutoSelectRepeatRow == true) {
-                //                  datasource.setCurrentRecord({
-                //                      record: record
-                //                  });
-                needRecord[recordIndex] = record;
-                recordIndex++;
-            }
-            isRepeat = true;
-            recordObjectCache[recordValueCache].push(record);
-        } else {
-            recordObjectCache[recordValueCache] = [record];
-        }
-    }
-    var resultParam = {};
-    resultParam["records"] = needRecord;
-    resultParam["isSelect"] = true;
-    datasource.selectRecords(resultParam);
-    return isRepeat;
+    resolve();
 }
 
-// 检查前台实体是否有重复数据  2016-08-15 liangzc：更换处理逻辑
-var _checkEntityUnique_other = function (entityName, checkFields, isAutoSelectRepeatRow) {
+/** 检查前台实体是否有重复数据 */
+var checkEntityUnique = function (entityName, checkFields, isAutoSelectRepeatRow) {
     var isRepeat = false;
-    var recordObjectCache = {};
     var datasource = vds.ds.lookup(entityName);
     var records = datasource.getAllRecords().toArray();
     var needRecord = [];
@@ -108,14 +50,13 @@ var _checkEntityUnique_other = function (entityName, checkFields, isAutoSelectRe
     //将所有检查字段放进Map，所有检查字段对应的一个数组，数组存放该字段的所有数据
     for (var j = 0; j < checkFields.length; j++) {
         var checkField = checkFields[j].entityFiled;
-        checkField = _getFieldCode(checkField);
+        checkField = getFieldCode(checkField);
         recordMap[checkField] = [];
         checkFieldArray[j] = checkField;
     }
     var fieldRecord = {}; //第一次出现的记录集合
     var NeedFirstRecord = []; //存放重复的，并且是第一次的记录
     var sureRepeatRecord = [];
-    var recordValueCache = "";
     var data_record = {};
     for (var i = 0; i < records.length; i++) {
         var record = records[i];
@@ -158,21 +99,15 @@ var _checkEntityUnique_other = function (entityName, checkFields, isAutoSelectRe
         recordIndex++;
     }
     if (isRepeat == true && isAutoSelectRepeatRow == true && needRecord != null && needRecord.length > 0) {
-        var resultParam = {};
-        resultParam["records"] = needRecord;
-        resultParam["isSelect"] = true;
-        datasource.setCurrentRecord({
-            record: needRecord[needRecord.length - 1]
-        });
-        datasource.selectRecords(resultParam);
+        datasource.setCurrentRecord(needRecord[needRecord.length - 1]);
+        datasource.selectRecords(needRecord);
     }
     return isRepeat;
 }
 
-// 检查后台表是否有重复数据
-var _checkTableUnique = function (entityName, tableName, checkFields, dsWhere, isAutoSelectRepeatRow, ruleContext) {
+/** 检查后台表是否有重复数据 */
+var checkTableUnique = function (entityName, tableName, checkFields, dsWhere, isAutoSelectRepeatRow, ruleContext, resolve, reject) {
     var isRepeat = false;
-
     var wrParam = {
         "type": vds.ds.WhereType.Table,
         "methodContext": ruleContext.getMethodContext()
@@ -183,11 +118,13 @@ var _checkTableUnique = function (entityName, tableName, checkFields, dsWhere, i
     var filterCondition = {};
     var datasource = vds.ds.lookup(entityName);
     var entityRecords = datasource.getAllRecords().toArray();
-    if (entityRecords.length === 0)
+    if (entityRecords.length === 0) {
+        setResult(ruleContext, isRepeat, resolve);
         return false;
+    }
 
     var fieldType = {};
-    var fields = datasource.getMetadata().fields;
+    var fields = datasource.getMetadata().getFields();
     for (var i = 0; i < fields.length; i++) {
         fieldType[fields[i]["code"]] = fields[i]["type"];
     }
@@ -195,15 +132,16 @@ var _checkTableUnique = function (entityName, tableName, checkFields, dsWhere, i
     var tmpCondition = {};
     for (var _ii = 0; _ii < checkFields.length; _ii++) {
         var checkField = checkFields[_ii].tableField;
-        checkField = _getFieldCode(checkField);
+        checkField = getFieldCode(checkField);
         tmpCondition[checkField] = [];
     }
+
     for (var i = 0; i < entityRecords.length; i++) {
         var record = entityRecords[i];
         var andEqConds = [];
         for (var t = 0; t < checkFields.length; t++) {
             var checkField = checkFields[t].tableField;
-            checkField = _getFieldCode(checkField);
+            checkField = getFieldCode(checkField);
             filterCondition[checkField] = "";
             var fieldValue = record.get(checkField);
 
@@ -224,14 +162,16 @@ var _checkTableUnique = function (entityName, tableName, checkFields, dsWhere, i
     }
 
     // 检查判断是否前台实体所需检查条件不存在
-    if ("{}" === JSON.stringify(newTmpCondition))
+    if ("{}" === JSON.stringify(newTmpCondition)) {
+        setResult(ruleContext, isRepeat, resolve);
         return false;
+    }
 
     tmpCondition = newTmpCondition;
 
     var andEqConds = [];
     for (var i = 0; i < checkFields.length; i++) {
-        var checkField = _getFieldCode(checkFields[i].tableField);
+        var checkField = getFieldCode(checkFields[i].tableField);
         var value = tmpCondition[checkField];
         if (value && value.length > 0) {
             value = value.join(",");
@@ -260,7 +200,6 @@ var _checkTableUnique = function (entityName, tableName, checkFields, dsWhere, i
         entityChangedRecords.push(record);
     });
 
-    var andWhereCons = [];
     var tmpNullIn = [];
     for (var i = 0; i < entityDeletedRecords.length; i++) {
         var deleteRecord = entityDeletedRecords[i];
@@ -280,61 +219,11 @@ var _checkTableUnique = function (entityName, tableName, checkFields, dsWhere, i
     if (undefined != dsWhere && null != dsWhere && dsWhere.length > 0)
         where.addCondition(dsWhere);
 
-    // 查询后台表记录
-    var tableRepeatRecords = _getTableRecords(tableName, where);
-    tableRepeatRecords = handleOtherCondition(tableRepeatRecords, tmpNullIn, checkFields);
-    // 如果有查询到记录，则证明后台查询有重复
-    if (undefined != tableRepeatRecords && null != tableRepeatRecords && tableRepeatRecords.length > 0) {
-        if (isRepeat == false && isAutoSelectRepeatRow == true) {
-            var needRecord = [];
-            var recordIndex = 0;
-            for (var _a = 0; _a < tableRepeatRecords.length; _a++) {
-                var rec = tableRepeatRecords[_a];
-                if (rec) {
-                    var criteria = vds.ds.createCriteria();
-                    for (var p in filterCondition) {
-                        fieldValue = rec[p];
-                        criteria.eq(p, fieldValue)
-                    }
-                }
-
-                var repeateRecords = datasource.queryRecord({
-                    "criteria": criteria
-                }).toArray();
-                if (undefined != repeateRecords && null != repeateRecords && repeateRecords.length > 0) {
-                    needRecord[recordIndex] = repeateRecords[0];
-                    recordIndex++;
-                }
-            }
-            var resultParam = {};
-            resultParam["records"] = needRecord;
-            resultParam["isSelect"] = true;
-            datasource.selectRecords(resultParam);
-        }
-        isRepeat = true;
-    }
-
-    return isRepeat;
+    //检测后台表记录
+    getTableRecords(tableName, where, tmpNullIn, isAutoSelectRepeatRow, filterCondition, datasource, ruleContext, resolve, reject);
 }
-/**
- * 处理字段映射条件
- * */
-var handleOtherCondition = function (tableRecord, tmpNullIn, checkFields) {
-    var resultRecord = [];
-    if (undefined != tableRecord && null != tableRecord && tableRecord.length > 0) {
-        for (var i = 0; i < tableRecord.length; i++) {
-            var record = tableRecord[i];
-            var recordId = tableRecord[i]["id"];
-            if (tmpNullIn.indexOf(recordId) == -1) {
-                resultRecord.push(record);
-            }
-        }
-    }
-    return resultRecord;
-}
-/**
- * 拼装条件
- * */
+
+/** 拼装条件 */
 var getCondition = function (field, value, fieldType, operation, allCondition) {
     var logicOperation = null;
     if (allCondition.length > 0) {
@@ -353,69 +242,77 @@ var getCondition = function (field, value, fieldType, operation, allCondition) {
     allCondition.push(singleCondition);
     return allCondition;
 }
-// 获取后台表数据
-var _getTableRecords = function (tableName, whereRestrict) {
-    var records = [];
-    var queryParam = {
-        "CheckUnique": true,
-        "dataSourceName": tableName,
-        "whereRestrict": whereRestrict,
-        "queryRecordStart": 0,
-        "queryPageSize": -0,
-        "queryType": "table"
-    };
 
-    // 2015-06-17 liangchaohui：配合SDK的修改作出修改
-    dataQuery.query({
-        "queryParams": [queryParam],
-        "isAsync": false,
-        "success": function (resultData) {
-            if (vds.object.isArray(resultData) && resultData.length > 0) {
-                var ds = resultData[0];
-                records = ds.datas.values;
+/** 检测后台表数据 */
+var getTableRecords = function (tableName, whereRestrict, tmpNullIn, isAutoSelectRepeatRow, filterCondition, datasource, ruleContext, resolve, reject) {
+    var promise = vds.rpc.queryData(tableName, "table", null, null, {
+        "where": whereRestrict,
+        "pageConfig": {
+            "pageSize": -0,
+            "recordStart": 0,
+        },
+        "methodContext": ruleContext.getMethodContext(),
+        "CheckUnique": true
+    });
+    promise.then(function (resultData) {
+        var isRepeat = false;
+        if (vds.object.isArray(resultData) && resultData.length > 0) {
+            var ds = resultData[0];
+            var records = ds.datas.values;
+            var tableRepeatRecords = handleOtherCondition(records, tmpNullIn);
+            // 如果有查询到记录，则证明后台查询有重复
+            if (undefined != tableRepeatRecords && null != tableRepeatRecords && tableRepeatRecords.length > 0) {
+                if (isAutoSelectRepeatRow == true) {
+                    var needRecord = [];
+                    var recordIndex = 0;
+                    for (var _a = 0; _a < tableRepeatRecords.length; _a++) {
+                        var rec = tableRepeatRecords[_a];
+                        if (rec) {
+                            var criteria = vds.ds.createCriteria();
+                            for (var p in filterCondition) {
+                                fieldValue = rec[p];
+                                criteria.eq(p, fieldValue)
+                            }
+                        }
+
+                        var repeateRecords = datasource.queryRecord(criteria).toArray();
+                        if (undefined != repeateRecords && null != repeateRecords && repeateRecords.length > 0) {
+                            needRecord[recordIndex] = repeateRecords[0];
+                            recordIndex++;
+                        }
+                    }
+                    datasource.selectRecords(needRecord);
+                }
+                isRepeat = true;
+                setResult(ruleContext, isRepeat, resolve);
+            }
+            else {
+                setResult(ruleContext, isRepeat, resolve);
             }
         }
-    });
-    return records;
-}
-
-// 转换字段中的值
-// 如果值为null或为空串，则作对应转换以便重复判断
-var _convertFieldValue = function (value) {
-    if ("null" == value) {
-        value = "\"null\"";
-    }
-    if (value == null || value == "") {
-        value = "";
-    }
-    if (value != null && vds.string.trim(value + "") == "" && (value + "").length > 0) {
-        value = "\"" + value + "\"";
-    }
-    return "" + value;
-}
-
-// 转换检查缓存中的值
-// 如果同时检查多个字段，则把多个字段的值都拼装成一个字符串
-var _convertCacheValue = function (cacheValue, checkField, fieldValue) {
-    if (cacheValue == "") {
-        if (fieldValue == "") {
-            cacheValue = checkField + "为空";
-        } else {
-            cacheValue = checkField + "=" + fieldValue;
+        else {
+            setResult(ruleContext, isRepeat, resolve);
         }
-    } else {
-        if (fieldValue == "") {
-            cacheValue = cacheValue + "," + checkField + "为空";
-        } else {
-            cacheValue = cacheValue + "," + checkField + "=" + fieldValue;
+    }).catch(reject);
+}
+
+/** 处理字段映射条件 */
+var handleOtherCondition = function (tableRecord, tmpNullIn) {
+    var resultRecord = [];
+    if (undefined != tableRecord && null != tableRecord && tableRecord.length > 0) {
+        for (var i = 0; i < tableRecord.length; i++) {
+            var record = tableRecord[i];
+            var recordId = tableRecord[i]["id"];
+            if (tmpNullIn.indexOf(recordId) == -1) {
+                resultRecord.push(record);
+            }
         }
     }
-    return cacheValue;
+    return resultRecord;
 }
 
-var _getFieldCode = function (field) {
-    //if (field.indexOf(".") >= 0)
-    //field = field.split(".")[1];
+/** 获取字段编码 */
+var getFieldCode = function (field) {
     if (field.indexOf(".") >= 0) {
         var fieldSplit = field.split(".");
         if (fieldSplit.length == 2)
@@ -425,7 +322,5 @@ var _getFieldCode = function (field) {
     }
     return field;
 }
-
-exports.main = main;
 
 export { main }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 检查表中字段数值的唯一性
  */
 
@@ -132,10 +132,8 @@ var main = function (ruleContext) {
  */
 function setBusinessRuleResult(ruleContext, result, userConfirm) {
 	if (ruleContext.setResult) {
-		ruleContext.setResult({
-			isUnique: result, //业务返回结果：表中字段数值是否满足唯一性约束
-			confirm: userConfirm //业务返回结果：用户选择继续还是终止
-		});
+		ruleContext.setResult("isUnique", result);     //业务返回结果：表中字段数值是否满足唯一性约束
+		ruleContext.setResult("confirm", userConfirm); //业务返回结果：用户选择继续还是终止
 	}
 }
 
@@ -245,7 +243,5 @@ var parseFieldsMessage = function (dsName) {
 	}
 	return fieldsNameMap;
 };
-
-exports.main = main;
 
 export { main }

@@ -1,29 +1,14 @@
-/**
+﻿/**
  * 从数据库获取数据到界面实体
  */
 
-var widgetContext, paginationService, DataAccessObject;
-
-exports.initModule = function (sBox) {
-    widgetContext = sBox.getService("vjs.framework.extension.platform.services.view.widget.common.context.WidgetContext");
-    paginationService = sBox.getService("vjs.framework.extension.platform.services.widget.pagination.facade");
-    DataAccessObject = sBox.getService("vjs.framework.extension.platform.services.repository.data.object");
-};
-
-vds.import("vds.object.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.ds.*");
+vds.import("vds.component.*", "vds.ds.*", "vds.exception.*", "vds.expression.*", "vds.log.*", "vds.rpc.*", "vds.string.*", "vds.widget.*", "vds.window.*");
 
 var main = function (ruleContext) {
     return new Promise(function (resolve, reject) {
         try {
             var inParamsObj = ruleContext.getVplatformInput();
-            var routeRuntime = ruleContext.getRouteContext();
             var isAsyn = inParamsObj["isAsyn"];
-            var callBack = routeRuntime.getCallBackFunc();
-            var callBackFunc = function (output) {
-                if (typeof (callBack) == "function") {
-                    callBack.apply(routeRuntime, [routeRuntime]);
-                }
-            }
             var itemConfigs = inParamsObj["itemsConfig"];
             var treeStruct = inParamsObj["treeStruct"];
             var dtds = [];
@@ -66,9 +51,6 @@ var main = function (ruleContext) {
                     // 处理动态加载数据
                     var dynamicLoadCallBackFunc = (function (d, flag) {
                         return function () {
-                            queryParam.dataAccessObjects[0].command.config.depth = dynamicLoad;
-                            queryParam.dataAccessObjects[0].command.config.whereToWhere = whereRestrict.toWhere();
-                            queryParam.dataAccessObjects[0].command.config.whereRestrictNoDepthFilter = whereRestrictNoDepthFilter;
                             //给方法变量赋值  (开发系统暂时没有分页配置逻辑，后期考虑)
                             if (undefined != totalRecordSave && null != totalRecordSave && totalRecordSave.length > 0) {
                                 handlePagingLogic(totalRecordSave, ruleContext, entityName, targetModelType);
@@ -78,16 +60,14 @@ var main = function (ruleContext) {
                         };
                     })(dtd, isAsyn);
                     var mappings = getMappings(items, ruleContext);
-                    var treeStructMap = handleTreeStruct(dynamicLoad, mappings, sourceName, entityName, treeStruct, isFieldAutoMapping, whereRestrict);
-                    // 自定义查询时，扩展的查询条件
-                    var extraCondition = null;
+                    var treeStructMap = handleTreeStruct(dynamicLoad, mappings, sourceName, entityName, treeStruct, isFieldAutoMapping, whereRestrict, ruleContext);
                     // 根据过滤条件获取出源数据源数据
                     if (undefined != queryConds && null != queryConds && queryConds.length > 0) {
                         whereRestrict.addCondition(queryConds);
                         whereRestrictNoDepthFilter.addCondition(queryConds);
                     }
 
-                    var params = genCustomParams(itemqueryparam,ruleContext);
+                    var params = genCustomParams(itemqueryparam, ruleContext);
 
                     whereRestrict.addParameters(params);
                     whereRestrictNoDepthFilter.addParameters(params);
@@ -125,13 +105,10 @@ var main = function (ruleContext) {
                     }
                     //分页控件分页
                     if (__isWindowRule && (undefined == isPaging || null == isPaging || !isPaging)) {
-                        var paginationObj = paginationService.getPagingInfoByDataSource(entityName);
+                        var paginationObj = getPagingInfoByDataSource(entityName);
                         recordStart = paginationObj.recordStart;
                         pageSize = paginationObj.pageSize;
                     }
-
-                    var isCover = true;
-                    var callBack = callBackFunc;
 
                     var queryParams = {};
                     var queryType = "Table";
@@ -158,57 +135,39 @@ var main = function (ruleContext) {
                             }
                             var fieldArray = orderByItem.field.split(".");
                             var orderByField = fieldArray[fieldArray.length - 1];
-                            if (orderByItem.type.toLowerCase() == 'desc') {
-                                whereRestrict.addOrderByDesc(orderByField);
-                                whereRestrictNoDepthFilter.addOrderByDesc(orderByField);
-                            } else {
-                                whereRestrict.addOrderBy(orderByField);
-                                whereRestrictNoDepthFilter.addOrderBy(orderByField);
-                            }
+                            var orderType = orderByItem.type.toLowerCase() == 'desc' ? whereRestrict.OrderType.DESC : whereRestrict.OrderType.ASC;
+                            whereRestrict.addOrderBy(orderByField, orderType);
+                            whereRestrictNoDepthFilter.addOrderBy(orderByField, orderType);
                         }
-                    }
-                    if (i < itemConfigs.length - 1) {
-                        callBack = null;
-                    } else {
-                        callBack = callBackFunc;
                     }
 
-                    var dataprovider = {
-                        "name": sourceName,
-                        "type": queryType
-                    };
-                    var modelSchema = {
-                        "modelMapping": {
-                            "sourceModelName": sourceName,
-                            "targetModelName": entityName,
-                            "treeStruct": treeStructMap,
-                            "targetModelType": targetModelType,
-                            "fieldMappings": mappings,
-                            "isFieldAutoMapping": isFieldAutoMapping//是否自动映射字段
+                    var newFieldMappings = [];
+                    for (var j = 0, _l = mappings.length; j < _l; j++) {
+                        var _map = mappings[j];
+                        var field = _map["destName"];
+                        if (field.indexOf(".") != -1) {
+                            field = field.split(".")[1];
                         }
+                        newFieldMappings.push({
+                            "code": field,
+                            "type": _map["type"] == "entityField" ? "field" : "expression",
+                            "value": _map["sourceName"]
+                        })
                     }
-                    var command = {
-                        "config": {
-                            "where": whereRestrict,
+
+                    var destEntity = getDatasource(entityName, targetModelType, ruleContext.getMethodContext());
+                    var promise = vds.rpc.queryData(sourceName, queryType, destEntity, newFieldMappings, {
+                        "where": whereRestrict,
+                        "pageConfig": {
                             "pageSize": pageSize,
                             "recordStart": recordStart,
-                            "filterFields": null
                         },
-                        "type": "query"
-                    }
-
-                    var dao = new DataAccessObject(dataprovider, modelSchema, command);
-                    var queryParam = {
-                        "dataAccessObjects": [dao],
+                        "treeStruct": treeStructMap,
+                        "methodContext": ruleContext.getMethodContext(),
                         "isAsync": i < itemConfigs.length - 1 ? false : true,
-                        "callback": dynamicLoadCallBackFunc
-                    }
-                    vds.rpc.queryData({
-                        "config": queryParam,
-                        "isAppend": false,
-                        "isConcurrent": isAsyn,
-                        "routeContext": routeRuntime
+                        "isAppend": false
                     });
+                    promise.then(dynamicLoadCallBackFunc).catch(reject);
                     return dtd;
                 }
                 if (i == 0) {
@@ -222,40 +181,226 @@ var main = function (ruleContext) {
                 }
             }
             if (isAsyn) { //串行执行加载规则
-                setTimeout((function (ctx) {
+                setTimeout((function (_resolve) {
                     return function () {
-                        ctx.fireRouteCallback()
+                        _resolve();
                     };
-                })(ruleContext), 1);
+                })(resolve), 1);
             }
-            nowDtd.then((function (flag, ctx) {
+            nowDtd.then((function (flag, _resolve) {
                 return function () {
-                    ctx.fireRuleCallback();
                     if (!flag) {
-                        ctx.fireRouteCallback();
+                        _resolve();
                     }
                 }
-            })(isAsyn, ruleContext));
-            /*
-            $.when.apply($.when, dtds).done((function(flag, ctx) {
-                return function() {
-                    ctx.fireRuleCallback();
-                    if (!flag) {
-                        ctx.fireRouteCallback();
-                    }
-                }
-            })(isAsyn, ruleContext));
-            */
+            })(isAsyn, resolve));
         } catch (ex) {
             reject(ex);
         }
     });
 };
 /**
-* 控件与规则排序信息汇总
-* @param {*} orderByCfg 
-* @param {*} widgetOrderInfo 
-*/
+ * 获取数据源
+ * @param {String} dsCode 数据源编码
+ * @param {String} type 数据源类型
+ * @param {@link MethodContext} methodContext 方法上下文
+ * @return {@link Datasource} 数据源实例
+ */
+var getDatasource = function (dsCode, type, methodContext) {
+    var datasource;
+    switch (type) {
+        case "windowVariant": //窗体输入
+        case "windowInput":
+            datasource = vds.window.getInput(dsCode);
+            break;
+        case "ruleSetVariant": //方法变量
+            datasource = methodContext.getVariable(dsCode);
+            break;
+        case "ruleSetOutput": //方法输出
+            datasource = methodContext.getOutput(dsCode);
+            break;
+        case "windowOutput": //窗体输出
+            datasource = vds.window.getOutput(dsCode);
+            break;
+        default: //界面实体
+            datasource = vds.ds.lookup(dsCode);
+            break;
+    }
+    return datasource;
+}
+
+var getPagingInfoByDataSource = function (entityName) {
+    var types = ["JGDataGrid", "JGPagination"];
+    var widgetCodes = vds.widget.getWidgetCodes(entityName)
+    var pageInfo;
+    if (widgetCodes) {
+        for (var i = 0; i < widgetCodes.length; i++) {
+            var widgetCode = widgetCodes[i];
+            var type = vds.widget.getType(widgetCode);
+            if (!types[type]) {
+                continue;
+            }
+            pageInfo = vds.widget.execute(widgetCode, "getPageInfo", [widgetCode]);
+            if (pageInfo) {
+                return pageInfo;
+            }
+        }
+    }
+    pageInfo = {
+        "recordStart": -1,
+        "pageSize": -1
+    };
+    return pageInfo;
+}
+
+//#region genCustomParams 方法
+
+var genCustomParams = function (paramDefines, ruleContext) {
+    var rs = {};
+    if (paramDefines && paramDefines.length > 0) {
+        for (var i = 0; i < paramDefines.length; i++) {
+            var define = paramDefines[i];
+            var key = define["queryfield"];
+            if (!key) {
+                key = define["Queryfield"];
+            }
+            var valueDefine = define["queryfieldValue"];
+            if (!valueDefine) {
+                valueDefine = define["QueryfieldValue"];
+            }
+            var type = define["type"];
+            var componentControlID = define["componentControlID"]
+            var value = getCustomParamValue(valueDefine, type, componentControlID, ruleContext);
+            rs[key] = value;
+        }
+    }
+    return rs;
+}
+/**
+ * 获取自定义参数的值
+ * @param queryfieldValue 参数值
+ * @param type 参数类源类型(参数值类型1表字段，2系统变量，3组件变量，4固定值，5自定义，6面板参数，8控件的值, 9表达式)
+ * @param componentControlId 参数来源控件
+ */
+var getCustomParamValue = function (queryfieldValue, type, componentControlId, ruleContext) {
+    var returnValue = "";
+
+    switch (vds.string.trim(type + "")) {
+        case "1":
+            if (queryfieldValue.indexOf(".") == -1) {
+                vds.log.warn(queryfieldValue + " 格式必须为表名.字段名");
+                break;
+            }
+            var ds = queryfieldValue.split(".")[0];
+            var fieldName = queryfieldValue.split(".")[1];
+            var record = getCurrentRecord(ds);
+            returnValue = record.get(fieldName);
+            break;
+        case "2":
+            returnValue = vds.component.getVariant(queryfieldValue);
+            break;
+        case "3":
+            returnValue = vds.window.getInput(queryfieldValue);
+            break;
+        case "4":
+            // returnValue = queryfieldValue;
+            // 固定值(0:假，1:真，2:空)
+            switch ((queryfieldValue + "").toLowerCase()) {
+                case "0":
+                    returnValue = false;
+                    break;
+                case "1":
+                    returnValue = true;
+                    break;
+                case "2":
+                    returnValue = null;
+                    break;
+                default:
+                    returnValue = queryfieldValue;
+                    break;
+            }
+            break;
+        case "5":
+            returnValue = queryfieldValue;
+            break;
+        case "6":
+            var valueQueryControlID = componentControlId;
+            var value = queryfieldValue;
+            var storeType = vds.widget.getStoreType(valueQueryControlID);
+            var storeTypes = vds.widget.StoreType;
+            // 按照控件不同的属性类型，获取参数值
+            var ds = getDsName(valueQueryControlID);
+            var record = getCurrentRecord(ds);
+            if (storeTypes.Set == storeType) {
+                // 集合类控件，组装表名.字段名进行取值
+                if (record) {
+                    var field = value.split("_")[1];
+                    returnValue = record.get(field);
+                } else {
+                    vds.log.error("集合控件:" + valueQueryControlID + " 无选中行，无法获取其参数值");
+                }
+            } else if (storeTypes.SingleRecordMultiValue == storeType) {
+                // 单记录多值控件，按照控件属性名字取得关联的标识，再进行取值
+                //var propertyCode = value.split("_")[1];
+                var propertyCode = "";
+                // 目前认为使用-分隔，也可以使用_分隔
+                if (value.indexOf("-") != -1) {
+                    propertyCode = value.split("-")[1];
+                } else {
+                    propertyCode = value.split("_")[1];
+                }
+                var fieldCode = vds.widget.getProperty(valueQueryControlID, propertyCode);
+                returnValue = record.get(fieldCode);
+            } else if (storeTypes.SingleRecord == storeType) {
+                // 单值控件，直接取值
+                var fieldCode = vds.widget.getFieldCodes(ds, valueQueryControlID)[0];
+                returnValue = record.get(fieldCode);
+                if (null == returnValue || undefined == returnValue) {
+                    returnValue = "";
+                }
+            }
+            break;
+        case "8":
+        case "9":
+        default:
+            if (!queryfieldValue) {// modify by xiedh 2016-04-26,预先校验，防止执行表达式报错
+                if (null == queryfieldValue || undefined == queryfieldValue) {
+                    returnValue = null;
+                } else {
+                    returnValue = queryfieldValue;
+                }//end modify
+            } else {
+                returnValue = vds.expression.execute(queryfieldValue, {
+                    "ruleContext": ruleContext
+                });
+            }
+            break;
+    }
+    //todo
+    if (queryfieldValue !== "\"\"" && returnValue === "") {
+        return null;
+    }
+    // 统一输出为字符串
+    //return (null == returnValue || undefined == returnValue ? "" : returnValue);
+    return (undefined == returnValue ? null : returnValue);
+}
+var getCurrentRecord = function (ds) {
+    var datasource = vds.ds.lookup(ds);
+    return datasource.getCurrentRecord();
+}
+
+var getDsName = function (widgetCode) {
+    var dsNames = vds.widget.getDatasourceCodes(widgetCode);
+    return dsNames[0];
+}
+
+//#endregion
+
+/**
+ * 控件与规则排序信息汇总
+ * @param {*} orderByCfg 
+ * @param {*} widgetOrderInfo 
+ */
 var getAllOrderInfo = function (orderByCfg, widgetOrderInfo) {
     var orders = widgetOrderInfo.concat(orderByCfg);
     var res = new Map();
@@ -264,20 +409,18 @@ var getAllOrderInfo = function (orderByCfg, widgetOrderInfo) {
     })
 }
 /**
-* 处理控件上定义的排序信息
-* @param {*} ruleContext 
-* @param {*} targetModelType 
-* @param {*} entityName 
-* @param {*} itemConfig 
-*/
+ * 处理控件上定义的排序信息
+ * @param {*} ruleContext 
+ * @param {*} targetModelType 
+ * @param {*} entityName 
+ * @param {*} itemConfig 
+ */
 var getWidgetOrderInfo = function (ruleContext, targetModelType, entityName, itemConfig, isFieldAutoMapping) {
-    var orderInfo = [];
     var widgetCodes = vds.widget.getWidgetCodes(entityName);
-    if (!widgetCodes) {
-        return orderInfo;
-    }
+    var orderInfo = [];
+
     for (var i = 0; i < widgetCodes.length; i++) {
-        var widget = widgetContext.get(widgetCodes[i], "widgetObj");
+        var widget = vds.widget.getProperty(widgetCodes[i], "widgetObj");
         if (!widget) {
             continue;
         }
@@ -288,7 +431,7 @@ var getWidgetOrderInfo = function (ruleContext, targetModelType, entityName, ite
                     config = itemConfig.items.find(function (item) { return item.destName.split(".")[1] == widget.fields[j].name });
                 } else if (isFieldAutoMapping) {
                     var datasource = vds.ds.lookup(entityName)
-                    var fields = datasource.getMetadata().fields;
+                    var fields = datasource.getMetadata().getFields();
                     if (fields && fields.length > 0) {
                         config = fields.find(function (item) { return item.code == widget.fields[j].name });
                         if (config) {
@@ -323,18 +466,18 @@ var getWidgetOrderInfo = function (ruleContext, targetModelType, entityName, ite
 };
 
 /**
-* 处理返回分页逻辑
-* @param {*} totalRecordSave 
-* @param {*} ruleContext 
-* @param {*} entityName 
-* @param {*} targetModelType 
-*/
+ * 处理返回分页逻辑
+ * @param {*} totalRecordSave 
+ * @param {*} ruleContext 
+ * @param {*} entityName 
+ * @param {*} targetModelType 
+ */
 var handlePagingLogic = function (totalRecordSave, ruleContext, entityName, targetModelType) {
     var totalRecordSaveObj = totalRecordSave[0];
     var isSaveTotalRecord = totalRecordSaveObj.isSaveTotalRecord;
     if (undefined != isSaveTotalRecord && null != isSaveTotalRecord && isSaveTotalRecord) {
         var dataSource = _getEntityDS(ruleContext, targetModelType, entityName);
-        var amount = dataSource.getDataAmount();
+        var amount = dataSource.getAllRecord().toArray().length;
         var target = totalRecordSaveObj.target;
         var targetType = totalRecordSaveObj.targetType;
         if (targetType == "methodVariant") {
@@ -349,21 +492,20 @@ var handlePagingLogic = function (totalRecordSave, ruleContext, entityName, targ
     }
 }
 /**
-* 处理树结构
-* @param {*} dynamicLoad 
-* @param {*} mappings 
-* @param {*} sourceName 
-* @param {*} entityName 
-* @param {*} treeStruct 
-* @param {*} isFieldAutoMapping 
-* @param {*} whereRestrict 
-*/
-var handleTreeStruct = function (dynamicLoad, mappings, sourceName, entityName, treeStruct, isFieldAutoMapping, whereRestrict) {
+ * 处理树结构
+ * @param {*} dynamicLoad 
+ * @param {*} mappings 
+ * @param {*} sourceName 
+ * @param {*} entityName 
+ * @param {*} treeStruct 
+ * @param {*} isFieldAutoMapping 
+ * @param {*} whereRestrict 
+ */
+var handleTreeStruct = function (dynamicLoad, mappings, sourceName, entityName, treeStruct, isFieldAutoMapping, whereRestrict, ruleContext) {
     var treeStructMap;
     if (dynamicLoad != null && dynamicLoad != '-1' && dynamicLoad != '0') {
         var treeStructMap = _getTreeStruct(entityName, treeStruct);
         if (treeStructMap != null) {
-            //var treeStructJson = encodeURIComponent(vds.string.toJson(treeStructMap));
             //将实体的树结构转为表的树结构
             var sourceTreeStruct = dest2SourceTreeStruct(mappings, treeStructMap, {
                 isFieldAutoMapping: isFieldAutoMapping
@@ -380,7 +522,6 @@ var handleTreeStruct = function (dynamicLoad, mappings, sourceName, entityName, 
             var dynamicCondition = vds.expression.execute(expression, { "ruleContext": ruleContext });
 
             if (dynamicCondition && dynamicCondition != "") {
-                //var eventName = whereRestrict.EVENT_AFTER_FIND;
                 whereRestrict.andConditionString("(" + dynamicCondition + ")");
             }
         }
@@ -388,8 +529,8 @@ var handleTreeStruct = function (dynamicLoad, mappings, sourceName, entityName, 
     return treeStructMap;
 }
 /*
-* 判断当前规则是否为窗体规则、或者构建方法规则
-*/
+ * 判断当前规则是否为窗体规则、或者构建方法规则
+ */
 var _isWindowRule = function (entityType) {
     var _isWinRule = true;
     switch (entityType) {
@@ -416,14 +557,11 @@ var _isWindowRule = function (entityType) {
 
 var handleWindowRule = function (entityName) {
     // 处理列表过滤条件重置
-    var _filterEntity = {
-        "datasourceName": entityName
-    }
-    var widgetCodes = vds.widget.getWidgetCodes(_filterEntity);
+    var widgetCodes = vds.widget.getWidgetCodes(entityName);
     // 处理窗体输入或者输出实体不支持绑定控件过滤条件
     if (widgetCodes && widgetCodes.length > 0) {
         for (var j = 0, len = widgetCodes.length; j < len; j++) {
-            var widget = widgetContext.get(widgetCodes[j], "widgetObj");
+            var widget = vds.widget.getProperty(widgetCodes[j], "widgetObj");
             if (widget && widget._filterFields)
                 widget._filterFields = null
         }
@@ -469,7 +607,6 @@ var getMappings = function (fromMappings, ruleContext) {
                     break;
                 case "expression":
                     //表达式
-                    //sourceName = formulaUtil.evalExpression(sourceName);
                     sourceName = vds.expression.execute(sourceName, { "ruleContext": ruleContext });
                     returnMapping["sourceName"] = sourceName;
                     break;
@@ -518,7 +655,7 @@ var dest2SourceTreeStruct = function (mappings, treeStructMap, params) {
                     }
                 }
             } else {
-                throw new Error("树结构字段[" + p + "]的映射[" + newSourceTreeStructMap[p] + "]不存在");
+                throw vds.exception.newConfigException("树结构字段[" + p + "]的映射[" + newSourceTreeStructMap[p] + "]不存在");
             }
         }
     }
@@ -561,158 +698,15 @@ var _getEntityDS = function (ruleContext, entityType, entityName) {
     } else if (entityType == "ruleSetInput") {
         ds = ruleContext.getMethodContext().getInput(entityName);
     } else if (entityType == "ruleSetOutput") {
-        ds = ruleContext.getMethodContext().getOutPut(entityName);
+        ds = ruleContext.getMethodContext().getOutput(entityName);
     } else if (entityType == "ruleSetVar") {
         ds = ruleContext.getMethodContext().getVariable(entityName);
     }
 
     if (undefined == ds)
-        throw new Error("找不到类型为[" + entityType + "]的实体：" + entityName);
+        throw vds.exception.newConfigException("找不到类型为[" + entityType + "]的实体：" + entityName);
 
     return ds;
 }
-
-//#region genCustomParams 方法
-
-var genCustomParams = function (paramDefines, ruleContext) {
-	var rs = {};
-	if (paramDefines && paramDefines.length > 0) {
-		for (var i = 0; i < paramDefines.length; i++) {
-			var define = paramDefines[i];
-			var key = define["queryfield"];
-			if (!key) {
-				key = define["Queryfield"];
-			}
-			var valueDefine = define["queryfieldValue"];
-			if (!valueDefine) {
-				valueDefine = define["QueryfieldValue"];
-			}
-			var type = define["type"];
-			var componentControlID = define["componentControlID"]
-			var value = getCustomParamValue(valueDefine, type, componentControlID, ruleContext);
-			rs[key] = value;
-		}
-	}
-	return rs;
-}
-/**
- * 获取自定义参数的值
- * @param queryfieldValue 参数值
- * @param type 参数类源类型(参数值类型1表字段，2系统变量，3组件变量，4固定值，5自定义，6面板参数，8控件的值, 9表达式)
- * @param componentControlId 参数来源控件
- */
-var getCustomParamValue = function (queryfieldValue, type, componentControlId, ruleContext) {
-	var returnValue = "";
-
-	switch (vds.string.trim(type + "")) {
-		case "1":
-			if (queryfieldValue.indexOf(".") == -1) {
-				vds.log.warn(queryfieldValue + " 格式必须为表名.字段名");
-				break;
-			}
-			var ds = queryfieldValue.split(".")[0];
-			var fieldName = queryfieldValue.split(".")[1];
-			var record = getCurrentRecord(ds);
-			returnValue = record.get(fieldName);
-			break;
-		case "2":
-			returnValue = vds.component.getVariant(queryfieldValue);
-			break;
-		case "3":
-			returnValue = vds.window.getInput(queryfieldValue);
-			break;
-		case "4":
-			// returnValue = queryfieldValue;
-			// 固定值(0:假，1:真，2:空)
-			switch ((queryfieldValue + "").toLowerCase()) {
-				case "0":
-					returnValue = false;
-					break;
-				case "1":
-					returnValue = true;
-					break;
-				case "2":
-					returnValue = null;
-					break;
-				default:
-					returnValue = queryfieldValue;
-					break;
-			}
-			break;
-		case "5":
-			returnValue = queryfieldValue;
-			break;
-		case "6":
-			var valueQueryControlID = componentControlId;
-			var value = queryfieldValue;
-			var storeType = vds.widget.getStoreType(valueQueryControlID);
-			var storeTypes = vds.widget.StoreType;
-			// 按照控件不同的属性类型，获取参数值
-			var ds = getDsName(valueQueryControlID);
-			var record = getCurrentRecord(ds);
-			if (storeTypes.Set == storeType) {
-				// 集合类控件，组装表名.字段名进行取值
-				if (record) {
-					var field = value.split("_")[1];
-					returnValue = record.get(field);
-				} else {
-					vds.log.error("集合控件:" + valueQueryControlID + " 无选中行，无法获取其参数值");
-				}
-			} else if (storeTypes.SingleRecordMultiValue == storeType) {
-				// 单记录多值控件，按照控件属性名字取得关联的标识，再进行取值
-				//var propertyCode = value.split("_")[1];
-				var propertyCode = "";
-				// 目前认为使用-分隔，也可以使用_分隔
-				if (value.indexOf("-") != -1) {
-					propertyCode = value.split("-")[1];
-				} else {
-					propertyCode = value.split("_")[1];
-				}
-				var fieldCode = vds.widget.getProperty(valueQueryControlID, propertyCode);
-				returnValue = record.get(fieldCode);
-			} else if (storeTypes.SingleRecord == storeType) {
-				// 单值控件，直接取值
-				var fieldCode = vds.widget.getFieldCodes(ds, valueQueryControlID)[0];
-				returnValue = record.get(fieldCode);
-				if (null == returnValue || undefined == returnValue) {
-					returnValue = "";
-				}
-			}
-			break;
-		case "8":
-		case "9":
-		default:
-			if (!queryfieldValue) {// modify by xiedh 2016-04-26,预先校验，防止执行表达式报错
-				if (null == queryfieldValue || undefined == queryfieldValue) {
-					returnValue = null;
-				} else {
-					returnValue = queryfieldValue;
-				}//end modify
-			} else {
-				returnValue = vds.expression.execute(queryfieldValue, {
-					"ruleContext": ruleContext
-				});
-			}
-			break;
-	}
-	//todo
-	if (queryfieldValue !== "\"\"" && returnValue === "") {
-		return null;
-	}
-	// 统一输出为字符串
-	//return (null == returnValue || undefined == returnValue ? "" : returnValue);
-	return (undefined == returnValue ? null : returnValue);
-}
-var getCurrentRecord = function (ds) {
-	var datasource = vds.ds.lookup(ds);
-	return datasource.getCurrentRecord();
-}
-
-var getDsName = function (widgetCode) {
-	var dsNames = vds.widget.getDatasourceCodes(widgetCode);
-	return dsNames[0];
-}
-
-//#endregion
 
 export { main }

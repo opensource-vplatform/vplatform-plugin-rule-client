@@ -15,14 +15,7 @@
  *  }
  **/
 
-var datasourcePuller, serialNumberUtil;
-
-exports.initModule = function (sBox) {
-	datasourcePuller = sBox.getService("vjs.framework.extension.platform.services.domain.datasource.DatasourcePuller");
-	serialNumberUtil = sBox.getService("vjs.framework.extension.util.SerialNumberUtil");
-}
-
-vds.import("vds.component.*", "vds.ds.*", "vds.expression.*", "vds.window.*");
+vds.import("vds.component.*", "vds.ds.*", "vds.expression.*", "vds.rpc.*", "vds.window.*");
 
 var main = function (ruleContext) {
 	return new Promise(function (resolve, reject) {
@@ -192,9 +185,8 @@ var main = function (ruleContext) {
 					case "0": //选中行
 						// 临时方案：没有选中行数据，取当前行数据
 						// 解决协同平台设计管理 单据编号新增实体记录后不能获取选中数据问题
-						var selectedValues = datasourcePuller.getSelectedAndCurrentRecords({
-							"datasourceName": dataSource
-						});
+						var datasource = vds.ds.lookup(dataSourceName);
+						var selectedValues = datasource.getCurrentRecord();
 						if (selectedValues && selectedValues.length > 0) {
 							for (var i = 0; i < selectedValues.length; i++) {
 								ids.push(selectedValues[i].getSysId());
@@ -271,7 +263,7 @@ var main = function (ruleContext) {
 												}
 											})(dtd)
 										};
-										serialNumberUtil.getSerialNumber(params);
+										getSerialNumber(params);
 									} else {
 										var params = {
 											"moduleId": windowCode,
@@ -292,7 +284,7 @@ var main = function (ruleContext) {
 												}
 											})(dtd)
 										};
-										serialNumberUtil.getSerialNumber(params);
+										getSerialNumber(params);
 									}
 								}
 							} else { // 如果有多个流水号，那么从二个流水号开始，都取第一个流水号的值
@@ -332,6 +324,32 @@ var main = function (ruleContext) {
 			reject(ex);
 		}
 	});
+};
+
+var getSerialNumber = function (params) {
+	var moduleId = params.moduleId;
+	var TableName = params.TableName;
+	var TableColumn = params.TableColumn;
+	var prefix = params.prefix;
+	var Length = params.Length;
+	var CoverLetter = params.CoverLetter;
+	var likeValStr = params.likeValStr;
+	var subLength = params.subLength;
+	var isLeftSubFlag = params.isLeftSubFlag;
+	var isReuseSerialNumber = params.isReuseSerialNumber;
+	var isAsync = params.isAsync;
+	var expression = "GetSerialNumberFunc(\"" + TableName + "\",\"" + TableColumn + "\",\"" + prefix + "\",\"" + Length + "\",\"" + CoverLetter + "\",\"" + likeValStr + "\",\"" + subLength + "\",\"" + isLeftSubFlag + "\",\"" + isReuseSerialNumber + "\")";
+	var paramData = { "expression": expression };
+	var promise = vds.rpc.command("WebExecuteFormulaExpression", paramData, {
+		"isAsync": isAsync,
+		"isRuleSetCode": false
+	});
+	promise.then(function (rs) {
+		var result = rs.data.result;
+		if (typeof (params.success) == "function") {
+			params.success(result);
+		}
+	}).catch(reject);
 };
 
 export { main }

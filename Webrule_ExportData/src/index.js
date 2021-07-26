@@ -36,7 +36,7 @@
  * </code>
  */
 
- vds.import("vds.object.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.ds.*");
+vds.import("vds.component.*", "vds.ds.*", "vds.expression.*", "vds.log.*", "vds.string.*", "vds.widget.*", "vds.window.*");
 
 var main = function (ruleContext) {
 	return new Promise(function (resolve, reject) {
@@ -93,6 +93,8 @@ var main = function (ruleContext) {
 			createIFrame(iframeId, "");
 			var formObj = createForm(formId, iframeId, url, tokenEncode);
 			formObj.submit();
+
+			resolve();
 		} catch (ex) {
 			reject(ex);
 		}
@@ -128,7 +130,6 @@ function createIFrame(iframeId, url) {
 	}
 	iframeObj.setAttribute("src", url);
 }
-
 
 //#region genCustomParams 方法
 
@@ -272,6 +273,5 @@ var getDsName = function (widgetCode) {
 }
 
 //#endregion
-
 
 export { main }

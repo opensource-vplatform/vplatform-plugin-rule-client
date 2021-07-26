@@ -3,13 +3,7 @@
  * shenxiangz
  */
 
-var treeViewModel;
-
-exports.initModule = function (sBox) {
-    treeViewModel = sBox.getService("vjs.framework.extension.platform.services.domain.tree.TreeViewUtil");
-}
-
-vds.import("vds.object.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.ds.*");
+vds.import("vds.ds.*", "vds.expression.*", "vds.log.*", "vds.string.*", "vds.widget.*", "vds.window.*");
 
 var main = function (ruleContext) {
     return new Promise(function (resolve, reject) {
@@ -91,7 +85,7 @@ var main = function (ruleContext) {
                         };
                     }
 
-                    treeStructData = treeViewModel.getTreeStructData({
+                    treeStructData = getTreeStructData({
                         "parentId": "-1",
                         "records": records,
                         "treeStruct": treeStructCfg
@@ -395,5 +389,116 @@ var filterExportColumns = function (allColumns, exportColumns, isFreeDB) {
 
     return retColumns;
 };
+
+//#region getTreeStructData函数
+
+var getTreeStructData = function (param) {
+    var parentId = param.parentId;
+    var records = param.records;
+    var treeStruct = param.treeStruct;
+    var childrensMap = _getChildrensMapWithIdKey(records, treeStruct);
+    var data = _getTreeJsonData(parentId, childrensMap, treeStruct);
+    return data;
+};
+
+var _getChildrensMapWithIdKey = function (records, treeStruct) {
+    var childrensMap = [];
+    if (records && records.length > 0) {
+        var orderNoRefField = treeStruct.orderField;
+        records.sort(function compare(a, b) {
+            return a.get(orderNoRefField) - b.get(orderNoRefField);
+        });
+        for (var index = 0; index < records.length; index++) {
+            var nodeId = records[index].getSysId();
+            if (childrensMap[nodeId] == null) {
+                childrensMap[nodeId] = [];
+            }
+            var nodeParentId = records[index].get(treeStruct.pidField);
+            var parent = getParent(records, nodeParentId);
+            if (nodeParentId != "" && !parent) {
+                vds.log.warn("当前记录的parentId不为空，但是前端数据库中不存在父亲节点。node[id] = " + nodeId);
+            }
+            if (parent) {
+                if (childrensMap[nodeParentId] == null) {
+                    childrensMap[nodeParentId] = [];
+                }
+                childrensMap[nodeParentId].push(records[index]);
+            } else {
+                //若是根结点,则创建一个key为"-1"的虚结点
+                if (childrensMap["-1"] == null) {
+                    childrensMap["-1"] = [];
+                }
+                childrensMap["-1"].push(records[index]);
+            }
+        }
+    }
+    return childrensMap;
+};
+
+var getParent = function (records, nodeId) {
+    for (var index = 0; index < records.length; index++) {
+        if (records[index].getSysId() == nodeId) {
+            return records[index];
+        }
+    }
+    return null;
+}
+
+var _getTreeJsonData = function (parentId, childrensMap, treeStruct) {
+    var datas = [];
+    var childs = childrensMap[parentId];
+    if (childs && childs.length > 0) {
+        var childCount = childs.length;
+        for (var i = 0; i < childCount; i++) {
+            var child = childs[i];
+            var id = child.getSysId();
+            var node = {};
+            node["record"] = child;
+            if (child.get(treeStruct.isLeafField) == "0" || child.get(treeStruct.isLeafField) == false) {
+                var isHasChild = _getIsHasChild(id, childrensMap);
+                if (isHasChild) {
+                    var children = _getTreeJsonData(id, childrensMap, treeStruct);
+                    node["children"] = children;
+                }
+            }
+            datas.push(node);
+        }
+    }
+    return datas;
+};
+
+var _getIsHasChild = function (nodeId, childrensMap) {
+    var rtn = false;
+    var childrens = childrensMap[nodeId];
+    if (childrens && childrens.length > 0) {
+        rtn = true;
+    }
+    return rtn;
+};
+
+var _getTreeJsonData = function (parentId, childrensMap, treeStruct) {
+    var datas = [];
+    var childs = childrensMap[parentId];
+    if (childs && childs.length > 0) {
+        var childCount = childs.length;
+        for (var i = 0; i < childCount; i++) {
+            var child = childs[i];
+            var id = child.getSysId();
+            var node = {};
+            node["record"] = child;
+            if (child.get(treeStruct.isLeafField) == "0" || child.get(treeStruct.isLeafField) == false) {
+                var isHasChild = _getIsHasChild(id, childrensMap, treeStruct);
+                if (isHasChild) {
+                    var children = _getTreeJsonData(id, childrensMap, treeStruct);
+                    node["children"] = children;
+                }
+            }
+            datas.push(node);
+        }
+    }
+    return datas;
+};
+
+//#endregion
 
 export { main }

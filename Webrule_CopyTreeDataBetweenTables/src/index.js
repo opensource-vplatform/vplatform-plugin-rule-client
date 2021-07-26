@@ -1,20 +1,16 @@
-/**
+﻿/**
  * 树形结构复制
  */
 
-var ParamFieldUtil;
-
-exports.initModule = function (sBox) {
-	ParamFieldUtil = sBox.getService("vjs.framework.extension.platform.services.domain.ruleset.ParamFeldUtil");
-}
-
-vds.import("vds.object.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.ds.*");
+vds.import("vds.component.*", "vds.ds.*", "vds.expression.*", "vds.log.*", "vds.rpc.*", "vds.string.*", "vds.widget.*", "vds.window.*");
 
 function main(ruleContext) {
 	return new Promise(function (resolve, reject) {
 		try {
 			var inParamObj = ruleContext.getVplatformInput();
-			if (!check(inParamObj)) return;
+			if (!check(inParamObj)) {
+				resolve();
+			}
 
 			var params = {
 				condSqls: [], //查询条件
@@ -53,9 +49,12 @@ function main(ruleContext) {
 
 				//处理字段对应关系
 				var itemsField = inParamObj.items[i].itemsField;
-				var fieldUtil = ParamFieldUtil.getInstance(itemsField, null, ruleContext.getRouteContext());
-				params.itemsField.push(fieldUtil.toItemsConverted());
-				fieldUtil.toParamMap(condParams);
+				var result = ParamField(itemsField, null, ruleContext);
+				params.itemsField.push(result.itemsConverted);
+				if (condParams != null) {
+					var paramMap = result.paramMap;
+					$.extend(condParams, paramMap);
+				}
 
 				//对于主表来说，处理当前选中节点
 				var isInsertCurrentNode = inParamObj.items[i].isInsertCurrentNode;
@@ -76,6 +75,7 @@ function main(ruleContext) {
 				if (responseObj.Success == false) {
 					throw new Error("树形结构表间数据复制执行异常:" + result.msg);
 				}
+				resolve();
 			};
 
 			var sConfig = {
@@ -88,7 +88,7 @@ function main(ruleContext) {
 				"params": { "isAsyn": false, "ruleContext": ruleContext }
 			}
 			var promise = vds.rpc.callCommand(sConfig.command, sConfig.datas, sConfig.params);
-			promise.then(callback);
+			promise.then(callback).catch(reject);
 
 		} catch (ex) {
 			reject(ex);
@@ -100,8 +100,10 @@ function main(ruleContext) {
  * 配置检查
  */
 function check(inParamObj) {
-	if (!checkMasterIdField(inParamObj)) return false;
-	return true;
+	if (!checkMasterIdField(inParamObj))
+		return false;
+	else
+		return true;
 }
 
 /**
@@ -279,6 +281,121 @@ var getCurrentRecord = function (ds) {
 var getDsName = function (widgetCode) {
 	var dsNames = vds.widget.getDatasourceCodes(widgetCode);
 	return dsNames[0];
+}
+
+//#endregion
+
+
+//#region ParamFieldUtil 实现
+
+var ParamField = function (itemsField, mapping, ruleContext) {
+	var itemsConverted = [];
+	var paramMap = {};
+
+	mapping = mapping || {
+		destField: 'destField',
+		sourceField: 'sourceField',
+		sourcetype: 'sourcetype'
+	};
+
+	for (var i = 0; i < itemsField.length; i++) {
+		_convertField(itemsField[i], ruleContext, mapping, itemsConverted, paramMap);
+	}
+
+	return { "itemsConverted": itemsConverted, "paramMap": paramMap };
+}
+
+/*转换一个字段、并且添加转换后的结果到this变量中*/
+var _convertField = function (field, ruleContext, mapping, itemsConverted, paramMap) {
+	var sourceField = _getSourceField(field, mapping);
+	switch (_getSourcetype(field, mapping)) {
+		case 'tableField'://1--SQL字段
+			_pushOldField(field, itemsConverted, paramMap);
+			break;
+		case '1'://1--SQL字段
+			_pushOldField(field, itemsConverted, paramMap);
+			break;
+		case '2'://2--系统变量
+			var paramValue = vds.component.getVariant(sourceField);
+			_pushParamField(field, paramValue, mapping, itemsConverted, paramMap);
+			break;
+		case '3'://3--组件变量
+			var paramValue = vds.window.getInput(sourceField);
+			_pushParamField(field, paramValue, mapping, itemsConverted, paramMap);
+			break;
+		case '4': //4--SQL表达式
+			var newSourceField = vds.expression.execute(sourceField, { "ruleContext": ruleContext });
+			_setSourceField(field, newSourceField, mapping);
+			_pushOldField(field, itemsConverted, paramMap);
+			break;
+		case '5'://5--前台表达式
+			var paramValue = vds.expression.execute(sourceField, { "ruleContext": ruleContext });
+			_pushParamField(field, paramValue, mapping, itemsConverted, paramMap);
+			break;
+		case 'expression'://5--前台表达式
+			var paramValue = vds.expression.execute(sourceField, { "ruleContext": ruleContext });
+			_pushParamField(field, paramValue, mapping, itemsConverted, paramMap);
+			break;
+		case '6'://6--实体字段
+			var dataSourceName = _getTableName(sourceField);
+			var fieldName = _getFieldName(sourceField);
+			var datasource = manager.lookup(dataSourceName);
+			var record = datasource.getCurrentRecord();
+			var paramValue = record.get(fieldName);
+			_pushParamField(field, paramValue, mapping, itemsConverted, paramMap);
+			break;
+		default:
+			_pushOldField(field, itemsConverted, paramMap);
+	}
+};
+
+var _pushOldField = function (field, itemsConverted, paramMap) {
+	itemsConverted.push($.extend({}, field));
+};
+
+var _pushParamField = function (field, paramValue, mapping, itemsConverted, paramMap) {
+	var paramName = _genParamName(_getDestField(field, mapping));
+	var item = $.extend({}, field);
+	item[mapping.sourceField] = ':' + paramName;
+	itemsConverted.push(item);
+	paramMap[paramName] = paramValue;
+};
+
+var _genParamName = function (fieldName) {
+	var name = fieldName.replace(/[.]/g, '_');
+	return name + '_' + vds.string.uuid();
+};
+
+var _getDestField = function (item, mapping) {
+	return item[mapping.destField];
+};
+
+var _getSourceField = function (item, mapping) {
+	return item[mapping.sourceField];
+};
+
+var _setSourceField = function (item, newSourceField, mapping) {
+	item[mapping.sourceField] = newSourceField;
+};
+
+var _getSourcetype = function (item, mapping) {
+	return item[mapping.sourcetype];
+};
+
+var _getTableName = function (field) {
+	var retvalue = field;
+	if (field.indexOf(".") != -1) {
+		retvalue = field.split(".")[0];
+	}
+	return retvalue;
+}
+
+var _getFieldName = function (field) {
+	var retvalue = field;
+	if (field.indexOf(".") != -1) {
+		retvalue = field.split(".")[1];
+	}
+	return retvalue;
 }
 
 //#endregion

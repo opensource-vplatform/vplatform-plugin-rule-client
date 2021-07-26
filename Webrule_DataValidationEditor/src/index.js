@@ -1,13 +1,8 @@
-/**
+﻿/**
  *	数值校验业务规则
- *  jiangxf 2012-5-21
+ *
  */
 
-var windowVmManager;
-
-exports.initModule = function (sBox) {
-	windowVmManager = sBox.getService("vjs.framework.extension.platform.services.vmmapping.manager.WindowVMMappingManager");
-}
 /**
  * 校验不为空
  */
@@ -76,7 +71,7 @@ function isIdCardNo(idCardNum) {
 	//下面分别分析出生日期和校验位
 	var len = idCardNum.length;
 	if (len == 15) {
-		re = new RegExp(/^(\d{2})(\d{4})(\d{2})(\d{2})(\d{2})(\d{3})$/);
+		var re = new RegExp(/^(\d{2})(\d{4})(\d{2})(\d{2})(\d{2})(\d{3})$/);
 		var arrSplit = idCardNum.match(re);
 		if (aCity[parseInt(arrSplit[1])] == null) {
 			vds.log.error("15位身份证号码中存在非法地区，请检查");
@@ -91,7 +86,7 @@ function isIdCardNo(idCardNum) {
 		}
 	}
 	if (len == 18) {
-		re = new RegExp(/^(\d{2})(\d{4})(\d{4})(\d{2})(\d{2})(\d{3})([0-9]|X)$/);
+		var re = new RegExp(/^(\d{2})(\d{4})(\d{4})(\d{2})(\d{2})(\d{3})([0-9]|X)$/);
 		var arrSplit = idCardNum.match(re);
 		if (aCity[parseInt(arrSplit[1])] == null) {
 			vds.log.error("18位身份证号码中存在非法地区，请检查");
@@ -106,7 +101,6 @@ function isIdCardNo(idCardNum) {
 		} else {
 			//检验18位身份证的校验码是否正确。
 			//校验位按照ISO 7064:1983.MOD 11-2的规定生成，X可以认为是数字10。
-			var valnum;
 			var arrInt = new Array(7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2);
 			var arrCh = new Array('1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2');
 			var nTemp = 0,
@@ -114,7 +108,7 @@ function isIdCardNo(idCardNum) {
 			for (i = 0; i < 17; i++) {
 				nTemp += idCardNum.substr(i, 1) * arrInt[i];
 			}
-			valnum = arrCh[nTemp % 11];
+			var valnum = arrCh[nTemp % 11];
 			if (valnum != idCardNum.substr(17, 1)) {
 				vds.log.error("18位身份证的校验码不正确！末位应为：" + valnum);
 				return false;
@@ -266,13 +260,13 @@ var regs = [
 	checkRegularExp //20.正则表达式
 ];
 
-vds.import("vds.object.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.ds.*");
+vds.import("vds.component.*", "vds.ds.*", "vds.expression.*", "vds.i18n.*", "vds.log.*", "vds.message.*", "vds.object.*", "vds.string.*", "vds.widget.*", "vds.window.*");
 
 //规则主入口(必须有)
 var main = function (ruleContext) {
 	return new Promise(function (resolve, reject) {
 		try {
-			ERRORNAME = "规则[DataValidationEditor]: ";
+			var expressType;
 			var checkResult = true;
 			var userConfirm = true;
 			var inParams = ruleContext.getVplatformInput();
@@ -365,13 +359,15 @@ var main = function (ruleContext) {
 						}
 					} else {
 						vds.log.error("实体[" + dbCode + "]不存在");
-						return false;
+						resolve();
 					}
 				}
 			}
+
 			var callback = function (val) {
 				userConfirm = typeof (val) == "boolean" ? val : userConfirm;
 				setBusinessRuleResult(ruleContext, checkResult, userConfirm);
+				resolve();
 			}
 
 			//如果检查不通过，处理提示信息
@@ -379,6 +375,7 @@ var main = function (ruleContext) {
 				if (messageType == 0) {
 					//不提示，直接返回验证结果
 					setBusinessRuleResult(ruleContext, checkResult, userConfirm);
+					resolve();
 				} else {
 					if (messageType == 1) { //提示，继续执行
 						var promise = vds.message.info(finalMessage);
@@ -396,8 +393,8 @@ var main = function (ruleContext) {
 				}
 			} else {
 				setBusinessRuleResult(ruleContext, checkResult, userConfirm);
+				resolve();
 			}
-			return true;
 		} catch (ex) {
 			reject(ex);
 		}
@@ -409,10 +406,8 @@ var main = function (ruleContext) {
  */
 function setBusinessRuleResult(ruleContext, result, userConfirm) {
 	if (ruleContext.setResult) {
-		ruleContext.setResult({
-			isValidateOK: result, //业务返回结果：校验是否通过
-			confirm: userConfirm
-		});
+		ruleContext.setResult("isValidateOK", result);
+		ruleContext.setResult("confirm", userConfirm);
 	}
 }
 
@@ -446,7 +441,7 @@ var getValueByType = function (dataType, dataSource, ruleContext) {
 				var dsName = dsNames[0];
 				var dataSource = vds.ds.lookup(dsName);
 				var multiValue = dataSource.getCurrentRecord();
-				var refField = vds.widget.getProperty(valueQueryControlID,propertyCode);
+				var refField = vds.widget.getProperty(valueQueryControlID, propertyCode);
 				result = multiValue[refField];
 				break;
 			} else if (vds.widget.StoreType.SingleRecord == storeType) {

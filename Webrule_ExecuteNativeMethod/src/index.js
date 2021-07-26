@@ -1,4 +1,4 @@
-/**
+﻿/**
  *  执行开发系统方法
  *  2、执行开发系统方法规则实现
  *  （1）处理规则的入参
@@ -21,6 +21,8 @@ exports.initModule = function (sBox) {
 	Record = sBox.getService("vjs.framework.extension.platform.interface.model.datasource.Record");
 	nativeMethodAccessorService = sBox.getService("vjs.framework.extension.platform.services.operation.local.NativeMethodAccessor", { 'type': "dotNet" });
 }
+
+vds.import("vds.ds.*", "vds.object.*");
 
 //规则主入口(必须有)
 var main = function (ruleContext) {

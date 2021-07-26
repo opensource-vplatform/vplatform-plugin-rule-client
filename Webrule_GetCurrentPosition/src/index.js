@@ -4,7 +4,7 @@
 
 vds.import("vds.app.*");
 
-function main(ruleContext) {
+var main = function (ruleContext) {
 	return new Promise(function (resolve, reject) {
 		try {
 			var success = function (rs) {

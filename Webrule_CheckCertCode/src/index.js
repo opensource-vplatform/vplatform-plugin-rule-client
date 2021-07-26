@@ -36,8 +36,7 @@ var main = function (ruleContext) {
 			if (undefined == inputCode || null == inputCode || undefined == widgetId || null == widgetId) {
 				if ("fileID" != buildTargetType) {
 					//设置返回值
-					setBusinessRuleResult(ruleContext, false);
-					return;
+					setBusinessRuleResult(ruleContext, false, resolve);
 				}
 			}
 
@@ -74,12 +73,10 @@ var main = function (ruleContext) {
 								if (datas && datas.success) {
 									success();
 									setBusinessRuleResult(ruleContext, outFlag);
-									resolve();
 								} else {
 									var result = vds.message.error("生成验证码失败" + (datas.msg ? ", 错误信息：" + datas.msg : ""));
 									result.then(function () {
 										setBusinessRuleResult(ruleContext, outFlag);
-										resolve();
 									}).catch(reject);
 								}
 							}).catch(reject);
@@ -88,18 +85,17 @@ var main = function (ruleContext) {
 							//xx参数防止图片组件接受相同地址时不刷新问题
 							var url = vds.environment.getContextPath() + 'module-operation!executeOperation?moduleId=' + moduleId + '&operation=FileCertImage&xx=' + iden;
 							vds.widget.execute(widgetId, 'setImageUrl', [url]);
+							resolve();
 						}
 					}
 					else {
 						//设置返回值
-						setBusinessRuleResult(ruleContext, outFlag);
-						resolve();
+						setBusinessRuleResult(ruleContext, outFlag, resolve);
 					}
 				}
 				else {
 					//设置返回值
-					setBusinessRuleResult(ruleContext, outFlag);
-					resolve();
+					setBusinessRuleResult(ruleContext, outFlag, resolve);
 				}
 			};
 
@@ -115,8 +111,7 @@ var main = function (ruleContext) {
 			var promise = vds.rpc.callCommand(sConfig.command, sConfig.datas, sConfig.params);
 			promise.then(callback).catch(reject);
 
-			/**
-			 * desc 异常处理方法
+			/** 异常处理方法
 			 * @ruleContext 规则上下文
 			 * @error_msg 提示信息
 			 * */
@@ -126,13 +121,13 @@ var main = function (ruleContext) {
 				throw exception;
 			}
 
-			/**
-			 * 设置业务返回结果
+			/** 设置规则返回结果
 			 */
-			function setBusinessRuleResult(ruleContext, result) {
+			function setBusinessRuleResult(ruleContext, result, resolve) {
 				if (ruleContext.setResult) {
-					ruleContext.setResult("isValidateOK", result); 
+					ruleContext.setResult("isValidateOK", result);
 				}
+				resolve();
 			}
 		} catch (ex) {
 			reject(ex);

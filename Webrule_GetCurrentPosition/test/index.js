@@ -4,7 +4,7 @@ vds.config({
 }).ready(function(){
     vds.mock.init("../manifest.json").then(function(mock){
         for(var i=0;i<40;i++){
-            mock.get("GetClosestPosition").then(function(ruleMock){
+            mock.get("GetCurrentPosition").then(function(ruleMock){
                 var inputs = ruleMock.getInputs();
                 var args = [];
                 for(var i in inputs){

@@ -2,17 +2,7 @@
  * 加载动态交叉表到实体
  */
 
-var paginationService;
-var dataAdapter;
-var DataAccessObject;
-
-exports.initModule = function (sBox) {
-    paginationService = sBox.getService("vjs.framework.extension.platform.services.widget.pagination.facade");
-    dataAdapter = sBox.getService("vjs.framework.extension.platform.services.viewmodel.dataadapter.DataAdapter");
-    DataAccessObject = sBox.getService("vjs.framework.extension.platform.services.repository.data.object");
-};
-
-vds.import("vds.ds.*", "vds.exception.*", "vds.expression.*", "vds.string.*");
+vds.import("vds.component.*", "vds.ds.*", "vds.exception.*", "vds.expression.*", "vds.log.*", "vds.rpc.*", "vds.string.*", "vds.widget.*", "vds.window.*");
 
 //规则主入口(必须有)
 var main = function (ruleContext) {
@@ -21,13 +11,6 @@ var main = function (ruleContext) {
             //获取规则上下文中的规则配置值
             var inParamsObj = ruleContext.getVplatformInput();
             var isAsyn = inParamsObj["isAsyn"];
-            var routeRuntime = ruleContext.getRouteContext();
-            var callBack = routeRuntime.getCallBackFunc();
-            var callBackFunc = function (output) {
-                if (typeof (callBack) == "function") {
-                    callBack.apply(routeRuntime, [routeRuntime]);
-                }
-            }
             var itemConfigs = inParamsObj["itemsConfig"];
             for (var i = 0; i < itemConfigs.length; i++) {
                 var itemConfig = itemConfigs[i];
@@ -88,14 +71,11 @@ var main = function (ruleContext) {
                 params = genCustomParams(itemqueryparam, ruleContext);
                 whereRestrict.addParameters(params);
 
-                var routeRuntime = ruleContext.getRouteContext();
-                var paginationObj = paginationService.getPagingInfoByDataSource(entityName);
+                var paginationObj = getPagingInfoByDataSource(entityName);
                 var recordStart = paginationObj.recordStart;
                 var pageSize = paginationObj.pageSize;
 
                 var isAsyn = isAsyn;
-                var callBack = callBackFunc;
-
                 var queryParams = {};
                 var queryType = "Table";
                 if (isType == 1) { //自定义查询
@@ -103,10 +83,8 @@ var main = function (ruleContext) {
                     queryParams = genCustomSqlQueryParams(whereRestrict.toParameters());
                     if (i < itemConfigs.length - 1) {
                         isAsyn = false;
-                        callBack = null;
                     } else {
                         isAsyn = isAsyn;
-                        callBack = callBackFunc;
                     }
                 } else {
                     queryParams = whereRestrict.toParameters();
@@ -120,62 +98,44 @@ var main = function (ruleContext) {
                             }
                             var fieldArray = orderByItem.field.split(".");
                             var orderByField = fieldArray[fieldArray.length - 1];
-                            if (orderByItem.type.toLowerCase() == 'desc') {
-                                whereRestrict.addOrderByDesc(orderByField);
-                            } else {
-                                whereRestrict.addOrderBy(orderByField);
-                            }
+                            var orderType = orderByItem.type.toLowerCase() == 'desc' ? whereRestrict.OrderType.DESC : whereRestrict.OrderType.ASC;
+                            whereRestrict.addOrderBy(orderByField, orderType);
                         }
                     }
                     if (i < itemConfigs.length - 1) {
                         isAsyn = false;
-                        callBack = null;
                     } else {
                         isAsyn = isAsyn;
-                        callBack = callBackFunc;
                     }
                 }
 
-                var entityObject = "";
-                if (isType == "Entity") {
-                    var dataSource = getDataSource(sourceName, ruleContext);
-                    entityObject = vds.string.toJson(dataSource.serialize(), false);
-                }
-
-                var dataprovider = {
-                    "name": sourceName,
-                    "type": queryType
-                };
-                var modelSchema = {
-                    "modelMapping": {
-                        "sourceModelName": sourceName,
-                        "targetModelName": entityName,
-                        "fieldMappings": mappings
+                var senior = { "command": "CommonRule_DynamicCrossDataToInterfaceEntity", "groupCrossConfig": tableOrQuery };
+                var newFieldMappings = [];
+                for (var j = 0, _l = mappings.length; j < _l; j++) {
+                    var _map = mappings[j];
+                    var field = _map["destName"];
+                    if (field.indexOf(".") != -1) {
+                        field = field.split(".")[1];
                     }
+                    newFieldMappings.push({
+                        "code": field,
+                        "type": _map["type"] == "entityField" ? "field" : "expression",
+                        "value": _map["sourceName"]
+                    })
                 }
-                var command = {
-                    "config": {
-                        "where": whereRestrict,
+                var destEntity = getDatasource(destName, "", ruleContext.getMethodContext());
+                var promise = vds.rpc.queryData(sourceName, queryType, destEntity, newFieldMappings, {
+                    "where": whereRestrict,
+                    "pageConfig": {
                         "pageSize": pageSize,
                         "recordStart": recordStart,
-                        "filterFields": null,//这里直接添加规则valueFunctions参数通用解析逻辑不解析旧直接用了之前为null值的参数
-                        "tableOrQuery": tableOrQuery
                     },
-                    "type": "query"
-                }
-
-                var dao = new DataAccessObject(dataprovider, modelSchema, command);
-                var queryParam = {
-                    "dataAccessObjects": [dao],
+                    "methodContext": ruleContext.getMethodContext(),
                     "isAsync": isAsyn,
-                    "sourceType": isType,
-                    "entityInfo": entityObject,
-                    "callback": null
-                }
-                dataAdapter.queryDataSenior({
-                    "config": queryParam,
-                    "isAppend": false
+                    "isAppend": false,
+                    "Senior": senior
                 });
+                promise.then(resolve).catch(reject);
             }
         } catch (ex) {
             reject(ex);
@@ -229,30 +189,28 @@ var getMappings = function (fromMappings, ruleContext) {
     return returnMappings;
 };
 
-/**
- * desc 获取各类数据源（窗体实体、方法实体）
- * dataSourceName 数据源名称
- * routeContext 路由上下文
- * */
-function getDataSource(dataSourceName, ruleContext) {
-    var dsName = dataSourceName;
-    var datasource = null;
-    if (dsName != null && dsName != "") {
-        /*本身是实体对象*/
-        if (vds.ds.isDatasource(dsName)) {
-            datasource = dsName;
-        } else {
-            /*窗体实体*/
-            if (dsName.indexOf(".") == -1 && dsName.indexOf("@") == -1) {
-                datasource = vds.ds.lookup(dsName);
-            } else {
-                /*方法实体*/
-                datasource = vds.expression.execute(dsName, { "ruleContext": ruleContext });
-            }
-        }
+var getDatasource = function (dsCode, type, methodContext) {
+    var datasource;
+    switch (type) {
+        case "windowVariant": //窗体输入
+        case "windowInput":
+            datasource = vds.window.getInput(dsCode);
+            break;
+        case "ruleSetVariant": //方法变量
+            datasource = methodContext.getVariable(dsCode);
+            break;
+        case "ruleSetOutput": //方法输出
+            datasource = methodContext.getOutput(dsCode);
+            break;
+        case "windowOutput": //窗体输出
+            datasource = vds.window.getOutput(dsCode);
+            break;
+        default: //界面实体
+            datasource = vds.ds.lookup(dsCode);
+            break;
     }
     if (!datasource) {
-        throw vds.exception.newBusinessException("实体[" + dsName + "]不存在");
+        throw vds.exception.newBusinessException("实体[" + dsCode + "]不存在");
     }
     return datasource;
 }
@@ -270,6 +228,29 @@ var genCustomSqlQueryParams = function (params) {
     return queryParams;
 };
 
+var getPagingInfoByDataSource = function (entityName) {
+    var types = ["JGDataGrid", "JGPagination"];
+    var widgetCodes = vds.widget.getWidgetCodes(entityName)
+    var pageInfo;
+    if (widgetCodes) {
+        for (var i = 0; i < widgetCodes.length; i++) {
+            var widgetCode = widgetCodes[i];
+            var type = vds.widget.getType(widgetCode);
+            if (!types[type]) {
+                continue;
+            }
+            pageInfo = vds.widget.execute(widgetCode, "getPageInfo", [widgetCode]);
+            if (pageInfo) {
+                return pageInfo;
+            }
+        }
+    }
+    pageInfo = {
+        "recordStart": -1,
+        "pageSize": -1
+    };
+    return pageInfo;
+}
 
 //#region genCustomParams 方法
 
@@ -413,6 +394,5 @@ var getDsName = function (widgetCode) {
 }
 
 //#endregion
-
 
 export { main }

@@ -2,6 +2,8 @@
  * 删除数据库中的记录
  */
 
+vds.import("vds.ds.*", "vds.log.*", "vds.object.*", "vds.rpc.*", "vds.string.*");
+
 var main = function (ruleContext) {
 	return new Promise(function (resolve, reject) {
 		try {
@@ -76,7 +78,7 @@ var main = function (ruleContext) {
 				}],
 				"params": { "isAsyn": true, "ruleContext": ruleContext }
 			}
-			var promise = vds.rpc.callCommand(sConfig.command, params.datas, params.params);
+			var promise = vds.rpc.callCommand(sConfig.command, sConfig.datas, sConfig.params);
 			promise.then(callback).catch(errorCallback);
 
 			return true;
@@ -85,7 +87,5 @@ var main = function (ruleContext) {
 		}
 	});
 };
-
-exports.main = main;
 
 export { main }

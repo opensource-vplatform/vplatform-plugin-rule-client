@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 从数据库加载数据到报表
  */
 
@@ -15,7 +15,7 @@ exports.initModule = function (sBox) {
 	componentRoute = sBox.getService("vjs.framework.extension.platform.data.storage.schema.route.ComponentRoute");
 };
 
-vds.import("vds.object.*", "vds.exception.*", "vds.expression.*", "vds.message.*", "vds.ds.*");
+vds.import("vds.component.*", "vds.ds.*", "vds.expression.*", "vds.log.*", "vds.message.*", "vds.object.*", "vds.rpc.*", "vds.string.*", "vds.widget.*", "vds.window.*");
 
 var main = function (ruleContext) {
 	return new Promise(function (resolve, reject) {
@@ -38,7 +38,6 @@ var main = function (ruleContext) {
 				reportCode = windowCode + "." + reportCode;
 			}
 
-			var routeContext = ruleContext.getRouteContext();
 			var operateType = inParamsObj.operateType; //操作类型（write,preview,expression）
 			var operateTypeExpress = inParamsObj.operateTypeExpress; //操作类型表达式（解析后的值：write,preview）
 			if (operateType == null) {
@@ -72,12 +71,12 @@ var main = function (ruleContext) {
 									reportCfg.dataSource = reportCfg.dataSource.replace("|", ";");
 								}
 								//将报表信息加载到报表控件
-								var reportData = getRemoteData(itemConfigs, ruleContext.getRouteContext());
+								var reportData = getRemoteData(itemConfigs, ruleContext);
 								if (reportControlCode) {
 									//执行JGReportAction.js的draw方法
 									vds.widget.execute(reportControlCode, "draw", [reportData, reportCfg]);
 									//执行扩展的JS脚本
-									var curWidget = widgetContext.get(reportControlCode, "widgetObj");
+									var curWidget = vds.widget.getProperty(reportControlCode, "widgetObj");
 									//报表ID
 									var curReportID = "v3Report_" + curWidget.getID();
 									window['VReport'] = window[curReportID];
@@ -209,7 +208,6 @@ var checkItemConfigs = function (ruleContext, reportEdition, itemConfigs) {
 // 弹出提示窗口
 var showMessage = function (ruleContext, msg) {
 	var promise = vds.message.warn(msg);
-	ScopeManager.closeScope();
 }
 
 // 移除构件编码
@@ -279,7 +277,6 @@ var getRemoteData = function (itemConfigs, ruleContext) {
 		var extraCondition = null;
 		// 根据过滤条件获取出源数据源数据
 		var isCustomSqlFind = (isType + "") == "1";
-		var routeContext = ruleContext.getRouteContext();
 		var wrParam = {
 			"type": isCustomSqlFind ? vds.ds.WhereType.Query : vds.ds.WhereType.Table,
 			"methodContext": ruleContext.getMethodContext()
@@ -317,11 +314,8 @@ var getRemoteData = function (itemConfigs, ruleContext) {
 						}
 						var fieldArray = orderByItem.field.split(".");
 						var orderByField = fieldArray[fieldArray.length - 1];
-						if (orderByItem.type.toLowerCase() == 'desc') {
-							whereRestrict.addOrderByDesc(orderByField);
-						} else {
-							whereRestrict.addOrderBy(orderByField);
-						}
+						var orderType = orderByItem.type.toLowerCase() == 'desc' ? whereRestrict.OrderType.DESC : whereRestrict.OrderType.ASC;
+						whereRestrict.addOrderBy(orderByField, orderType);
 					}
 				}
 			}
@@ -440,10 +434,9 @@ var getFromDataBase = function (itemConfig, ruleContext) {
 
 	//根据过滤条件获取出源数据
 	var isCustomSqlFind = (isType + "") == "1";
-	var routeContext = ruleContext.getRouteContext();
 	var wrParam = {
-		"fetchMode": isCustomSqlFind ? vds.ds.WhereType.Query : vds.ds.WhereType.Table,
-		"routeContext": ruleContext.getMethodContext()
+		"type": isCustomSqlFind ? vds.ds.WhereType.Query : vds.ds.WhereType.Table,
+		"methodContext": ruleContext.getMethodContext()
 	};
 	var whereRestrict = vds.ds.createWhere(wrParam);
 
@@ -478,11 +471,8 @@ var getFromDataBase = function (itemConfig, ruleContext) {
 				}
 				var fieldArray = orderByItem.field.split(".");
 				var orderByField = fieldArray[fieldArray.length - 1];
-				if (orderByItem.type.toLowerCase() == 'desc') {
-					whereRestrict.addOrderByDesc(orderByField);
-				} else {
-					whereRestrict.addOrderBy(orderByField);
-				}
+				var orderType = orderByItem.type.toLowerCase() == 'desc' ? whereRestrict.OrderType.DESC : whereRestrict.OrderType.ASC;
+				whereRestrict.addOrderBy(orderByField, orderType);
 			}
 		}
 	}
@@ -520,7 +510,6 @@ var getExpressionValue = function (ruleContext, srcExpression) {
 
 //处理"表"、"查询"表达式
 var getWhereRestrictExpression = function (ruleContext, dsWhere, itemqueryparam, orderBys) {
-	var routeContext = ruleContext.getRouteContext();
 	var mode = vds.ds.WhereType.Table;
 	var wrParam = {
 		"type": mode,
@@ -546,11 +535,8 @@ var getWhereRestrictExpression = function (ruleContext, dsWhere, itemqueryparam,
 			}
 			var fieldArray = orderByItem.field.split(".");
 			var orderByField = fieldArray[fieldArray.length - 1];
-			if (orderByItem.type.toLowerCase() == 'desc') {
-				whereRestrict.addOrderByDesc(orderByField);
-			} else {
-				whereRestrict.addOrderBy(orderByField);
-			}
+			var orderType = orderByItem.type.toLowerCase() == 'desc' ? whereRestrict.OrderType.DESC : whereRestrict.OrderType.ASC;
+			whereRestrict.addOrderBy(orderByField, orderType);
 		}
 	}
 
@@ -574,7 +560,6 @@ var getApiExpression = function (ruleContext, invokeRuleParams) {
 
 //打印方式为"TooneReport"，注册报表控件事件
 var registEventForTooneReport = function (componentCode, windowCode, reportControlCode, reportEvents, ruleContext) {
-	var scopeId = ScopeManager.getCurrentScopeId();
 	if (reportEvents != null && reportEvents.length > 0) {
 		for (var i = 0; reportEvents != null && i < reportEvents.length; i++) {
 			var reportEvent = reportEvents[i];
@@ -583,40 +568,29 @@ var registEventForTooneReport = function (componentCode, windowCode, reportContr
 			var invokeParams = reportEvent.invokeParams;
 			var returnMappings = reportEvent.returnMapping;
 			//原逻辑（规则注册事件）
-			registEventItemForTooneReport(componentCode, windowCode, reportControlCode, ruleContext, eventCode, ruleSetCode, invokeParams, returnMappings, scopeId);
+			registEventItemForTooneReport(componentCode, windowCode, reportControlCode, ruleContext, eventCode, ruleSetCode, invokeParams, returnMappings);
 		}
 	}
 
 	//单元格注册事件
-	registControlEventItemForTooneReport(reportControlCode, scopeId);
+	registControlEventItemForTooneReport(reportControlCode);
 }
 
-var registControlEventItemForTooneReport = function (reportControlCode, scopeId) {
+var registControlEventItemForTooneReport = function (reportControlCode) {
 	vds.widget.execute(reportControlCode, "registReportEvent", ["CellClick", function (rptData, successCallback, failCallback) {
 		if (rptData && rptData.eventCode) {
 			var ruleSetCode = rptData.eventCode;
-			ScopeManager.openScope(scopeId);
-			routeEngine.executeWindowRoute({
-				"ruleSetCode": ruleSetCode,
-				"args": null,
-				"success": function (args) {
-					successCallback(args);
-				},
-				"fail": function (args) {
-					alert("fail");
-					failCallback(args);
-				}
-			});
-			ScopeManager.closeScope();
+			var promise = vds.method.excute(ruleSetCode);
+			promise.then(successCallback).catch(failCallback);
 		}
 	}]);
 }
 
-var registEventItemForTooneReport = function (componentCode, windowCode, reportControlCode, ruleContext, eventCode, ruleSetCode, invokeParams, returnMappings, scopeId) {
+var registEventItemForTooneReport = function (componentCode, windowCode, reportControlCode, ruleContext, eventCode, ruleSetCode, invokeParams, returnMappings) {
 	vds.widget.execute(reportControlCode, "registReportEvent", [eventCode, function (rptData, successCallback, failCallback) {
-		ScopeManager.openScope(scopeId);
 		var param = parseParam(invokeParams, componentCode, windowCode, ruleSetCode, "local", "client-ruleSet", ruleContext, rptData);
-		routeEngine.executeWindowRoute({
+		//todo zhouzhiq带参数
+		vds.method.excute({
 			"ruleSetCode": ruleSetCode,
 			"args": param,
 			"success": function (args) {
@@ -684,7 +658,6 @@ var registEventItemForTooneReport = function (componentCode, windowCode, reportC
 				}
 			}
 		});
-		ScopeManager.closeScope();
 	}]);
 }
 
@@ -693,16 +666,9 @@ var parseParam = function (invokeParams, componentCode, windowCode, ruleSetCode,
 	//获取活动集配置
 	var ruleSetConfig;
 	if (windowCode) {
-		ruleSetConfig = windowRoute.getRoute({
-			"componentCode": componentCode,
-			"windowCode": windowCode,
-			"routeCode": ruleSetCode
-		});
+		ruleSetConfig = vds.method.get(ruleSetCode, componentCode, windowCode);
 	} else {
-		ruleSetConfig = componentRoute.getRoute({
-			"componentCode": componentCode,
-			"routeCode": ruleSetCode
-		});
+		ruleSetConfig = vds.method.get(ruleSetCode, componentCode);
 	}
 	for (var i = 0; invokeParams != null && i < invokeParams.length; i++) {
 		var invokeObj = invokeParams[i];
@@ -804,7 +770,6 @@ var parseParamForExpression = function (ruleContext, invokeObj, param, rptData) 
 }
 
 var parseParamForEntity = function (ruleContext, invokeObj, param, ruleSetConfig) {
-	var routeContext = ruleContext.getRouteContext();
 	//活动集参数
 	var paramCode = invokeObj["paramCode"];
 	//值来源
@@ -824,10 +789,10 @@ var parseParamForEntity = function (ruleContext, invokeObj, param, ruleSetConfig
 	var srcDB = null;
 	switch (paramSource) {
 		case "ruleSetInput":
-			srcDB = routeContext.getInputParam(srcEntityName);
+			srcDB = ruleContext.getMethodContext().getInput(srcEntityName);
 			break;
 		case "ruleSetVar":
-			srcDB = routeContext.getVariable(srcEntityName);
+			srcDB = ruleContext.getMethodContext().getVariable(srcEntityName);
 			break;
 		case "windowInput":
 			srcDB = windowParam.getInput({
@@ -1012,10 +977,7 @@ var createDataSource = function (ruleContext, srcDatas, destFields, paramFieldMa
 			var index = item.index;
 			var selectedRecord = freeDB.getRecordByIndex(index);
 			if (selectedRecord) {
-				var selectedObj = {};
-				selectedObj.records = [selectedRecord];
-				selectedObj.isSelect = true;
-				freeDB.selectRecords(selectedObj)
+				freeDB.selectRecords([selectedRecord])
 			}
 			var addObj = {};
 			addObj.records = [item.records];
@@ -1406,7 +1368,5 @@ var getDsName = function (widgetCode) {
 }
 
 //#endregion
-
-
 
 export { main }
