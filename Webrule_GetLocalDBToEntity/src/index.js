@@ -48,7 +48,7 @@ var main = function (ruleContext) {
                     var mode = isCustomSqlFind ? vds.ds.WhereType.Query : vds.ds.WhereType.Table;
                     var wrParam = {
                         "type": mode,
-                        "methodContext": ruleContext.getMethodContext
+                        "methodContext": ruleContext.getMethodContext()
                     };
                     var whereRestrict = vds.ds.createWhere(wrParam);
                     var whereRestrictNoDepthFilter = vds.ds.createWhere(wrParam);
