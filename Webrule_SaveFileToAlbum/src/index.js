@@ -33,13 +33,13 @@ var main = function (ruleContext) {
 					if (window.device.platform == "iOS") {
 						fileName = new Date().getTime() + "." + getFileNameLast(fileName);
 					}
-					var getFileUrlByFileIdExp = "GetFileUrlByFileId(\"" + fileId + "\")";
+					var getFileUrlByFileIdExp = 'GetFileUrlByFileId("' + fileId + '")';
 					var getFileUrlCB = function (url) {
 						saveFile(url, fileName, resolve, resolve);
 					}
 					executeExpression(getFileUrlByFileIdExp, getFileUrlCB, reject);
 				};
-				var getFileInfoExp = "GetFileInfo(\"" + fileId + "\",\"fileName\")";
+				var getFileInfoExp = 'GetFileInfo("' + fileId + '","fileName")';
 				executeExpression(getFileInfoExp, getFileInfoCB, reject);
 			}
 		} catch (err) {
@@ -50,8 +50,9 @@ var main = function (ruleContext) {
 
 var saveFile = function (fileUrl, fileName, resolve, reject) {
 	var failCB = function (error) {
-		reject(vds.exception.newConfigException("保存失败！"));
+		reject(vds.exception.newConfigException("保存失败；" + error.message));
 	};
+	alert(fileUrl + "@" + fileName);
 	var promise = vds.app.saveImage(fileUrl, fileName);
 	promise.then(resolve).catch(failCB);
 }
@@ -64,11 +65,14 @@ var executeExpression = function (expression, callback, reject) {
 		"expression": expression
 	};
 	var result = null;
-	var promise = vds.rpc.callCommand("WebExecuteFormulaExpression", paramData, {
+	var promise = vds.rpc.callCommand("WebExecuteFormulaExpression", null, {
 		"isAsync": false,
+		"isOperation":true,
+		"operationParam":paramData,
 		"isRuleSetCode": false
 	});
 	promise.then(function (rs) {
+		alert(JSON.stringify(rs));
 		result = rs.data.result;
 		callback(result);
 	}).catch(reject);

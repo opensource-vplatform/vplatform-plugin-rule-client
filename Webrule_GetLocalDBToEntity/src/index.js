@@ -43,7 +43,7 @@ var main = function (ruleContext) {
                     if (__isWindowRule) {
                         handleWindowRule(entityName);
                     }
-
+                    var isCustomSqlFind = (isType + "") == "1";
                     //动态加载
                     var mode = isCustomSqlFind ? vds.ds.WhereType.Query : vds.ds.WhereType.Table;
                     var wrParam = {
@@ -66,7 +66,6 @@ var main = function (ruleContext) {
                     var mappings = getMappings(items, ruleContext);
                     var treeStructMap = handleTreeStruct(dynamicLoad, mappings, sourceName, entityName, treeStruct, isFieldAutoMapping, whereRestrict, ruleContext);
                     // 根据过滤条件获取出源数据源数据
-                    var isCustomSqlFind = (isType + "") == "1";
                     //判断null，如果某个过滤条件的输入参数是计算结果值为null的话，那么这个过滤条件将被忽略。
                     if (undefined != queryConds && null != queryConds && queryConds.length > 0) {
                         var tmpQueryConds = [];
