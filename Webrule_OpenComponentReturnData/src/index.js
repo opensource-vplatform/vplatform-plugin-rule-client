@@ -40,16 +40,16 @@ var main = function (ruleContext) {
 			// var renderer = sandBox.getService("vjs.framework.extension.platform.services.view.window.render.mode", {
 			// 	type: openType
 			// });
-			var isFinish = true;
+			var isFinish = false;
 			switch (openType) {
 				case "currentWindow": //当前窗体跳转
+					isFinish = true;
 					vds.browser.redirect(componentCode, windowCode, {
 						"inputParams": windowInputParams,
 						"windowTitle": title
 					})
 					break;
 				case "dialogWindow": //对话框模态
-					isFinish = false;
 					render({
 						componentCode: componentCode,
 						windowCode: windowCode,
@@ -61,7 +61,6 @@ var main = function (ruleContext) {
 					}, resolve, reject)
 					break;
 				case "windowContainer": //窗体容器
-					isFinish = false;
 					var promise = vds.browser.renderToContainer(componentCode, windowCode, inParams.windowContainer, {
 						"inputParams": windowInputParams,
 						"title": title,
@@ -69,6 +68,7 @@ var main = function (ruleContext) {
 					});
 					promise.then(function(windowInstanceCode){
 						setResult(ruleContext,"windowInstanceCode", windowInstanceCode);
+						setResult(ruleContext, "isConfirmSelectionOnClose", false);
 						resolve();
 					}).catch(reject);
 					break;
@@ -80,13 +80,19 @@ var main = function (ruleContext) {
 							"ruleContext": ruleContext
 						})
 					}
-					vds.browser.renderToDivContainer(componentCode, windowCode, widgetCode, divContainerCode, {
+					var promise = vds.browser.renderToDivContainer(componentCode, windowCode, widgetCode, divContainerCode, {
 						"inputParams": windowInputParams,
 						"title": title,
 						"ruleContext": ruleContext
 					});
+					promise.then(function(windowInstanceCode){
+						setResult(ruleContext,"windowInstanceCode", windowInstanceCode);
+						setResult(ruleContext, "isConfirmSelectionOnClose", false);
+						resolve();
+					}).catch(reject);
 					break;
 				case "newWindow": //新窗体
+					isFinish = true;
 					vds.browser.newWindow(componentCode, windowCode, {
 						"inputParams": windowInputParams,
 						"title": title,
@@ -95,6 +101,7 @@ var main = function (ruleContext) {
 					break;
 				case "appointWindow": //指定窗体
 				case "currentWindowRedirection": //浏览器刷新
+					isFinish = true;
 					var winName = inParams.browerWindowFlag;
 					vds.browser.refresh(componentCode, windowCode, {
 						"inputParams": windowInputParams,
@@ -104,20 +111,24 @@ var main = function (ruleContext) {
 					});
 					break;
 				case "iemsHomeTab": //首页
-					vds.browser.renderToHomeTab(componentCode, windowCode, {
+					var promise = vds.browser.renderToHomeTab(componentCode, windowCode, {
 						"inputParams": windowInputParams,
 						"title": title,
 						"ruleContext": ruleContext
 					});
+					promise.then(function(isConfirmExit, output){
+						setResult(ruleContext, "isConfirmSelectionOnClose", isConfirmExit);
+						setResult(ruleContext, "windowInstanceCode", "");
+						resolve();
+					}).catch(reject);
 					break;
 				default:
 					throw vds.exception.newConfigException("不正确的打开方式：" + openType);
 			}
 			// 设置业务返回值  	
 			if (openType != "windowContainer") {
-				for (var key in businessRuleResult) {
-					setResult(ruleContext, key, businessRuleResult[key]);
-				}
+				setResult(ruleContext, "isConfirmSelectionOnClose", false);
+				setResult(ruleContext, "windowInstanceCode", "");
 			}
 			if (isFinish) {
 				resolve();
@@ -137,13 +148,6 @@ var setResult = function (ruleContext, code, value) {
 	if (ruleContext.setResult) {
 		ruleContext.setResult(code, value)
 	}
-}
-
-var browser, scopeManager;
-
-exports.initModule = function (sBox) {
-	browser = sBox.getService("vjs.framework.extension.platform.services.browser.Browser");
-	scopeManager = sBox.getService("vjs.framework.extension.platform.interface.scope.ScopeManager");
 }
 
 var render = function (params, resolve, reject) {
@@ -417,8 +421,6 @@ var openDialogWindow = function (ruleContext, businessRuleResult, componentCode,
 				var returnMappings = returnMappingsConfig;
 				try {
 					handleOpenWindowReturnValues(ruleContext, windowReturnValue, returnMappings);
-					resolve();
-					return;
 				} catch (e) {
 					reject(e);
 					return;
@@ -710,7 +712,7 @@ var getOpenWindowHeight = function (inParams, ruleContext) {
 	if (!heightExp) {
 		return null;
 	}
-	var retValue = exception.execute(heightExp, {
+	var retValue = vds.expression.execute(heightExp, {
 		"ruleContext": ruleContext
 	});
 	return retValue;
@@ -725,7 +727,7 @@ var getOpenWindowWidth = function (inParams, ruleContext) {
 	if (!widthExp) {
 		return null;
 	}
-	var retValue = exception.execute(widthExp, {
+	var retValue = vds.expression.execute(widthExp, {
 		"ruleContext": ruleContext
 	});
 	return retValue;
@@ -737,7 +739,7 @@ var getOpenWindowWidth = function (inParams, ruleContext) {
 var getOpenParam = function (inParams, ruleContext) {
 	var sourceValue = inParams["windowNumSource"];
 	// 默认按表达式取
-	openParam = vds.exception.execute(sourceValue, {
+	openParam = vds.expression.execute(sourceValue, {
 		"ruleContext": ruleContext
 	});
 	try {
