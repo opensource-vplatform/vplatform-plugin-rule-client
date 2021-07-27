@@ -29,7 +29,7 @@
 /**
  *	
  */
-//vds.import("vds.");
+vds.import("vds.expression.*","vds.exception.*","vds.log.*","vds.browser.*","vds.string.*","vds.environment.*","vds.widget.*","vds.window.*","vds.component.*","vds.ds.*")
 /**
  * 规则入口
  */
@@ -100,7 +100,7 @@ var main = function (ruleContext) {
 			}
 
 			vds.log.log("打开链接地址为：" + url);
-			setResult(ruleContext, isConfirmSelectionOnClose, undefined); //兼容其他方式使用返回值报错的问题
+			setResult(ruleContext, "isConfirmSelectionOnClose", undefined); //兼容其他方式使用返回值报错的问题
 			var isFinish = true;
 			//当前页面打开
 			if (targetType == TARGET_TYPE_CUR_PAGE) {
@@ -174,39 +174,45 @@ var main = function (ruleContext) {
 						"height": height
 					}
 					var callback = resolve;
-					isFinish = false;
 					if (isShowDialog) {
+						isFinish = false;
 						var returnMappings = inParamObj.returnMapping;
 						callback = ruleContext.genAsynCallback(function (params) {
 							if (params && params.isClickConfirm && returnMappings) {
 								handleOpenWindowReturnValues(ruleContext, params.outputs, returnMappings);
 							}
+							setResult(ruleContext, "isConfirmSelectionOnClose", params && params.isClickConfirm);
 							resolve();
 						})
+						var promise = vds.browser.dialog(url, params);
+						promise.then(callback).catch(reject);
 					} else {
 						params.primordial = true;
 						params.winName = params.winName;
+						vds.browser.newTab(url, params);
 					}
-					var promise = vds.browser.dialog(params);
-					promise.then(callback).catch(reject);
 				} else {
 					var userAgent = navigator.userAgent;
 					if (isShowDialog && userAgent.indexOf("v3app") < 1 && userAgent.indexOf("ydgApp") < 1) {
 						var params = {
-							url: url,
+							// url: url,
 							title: title
 						}
-						params["callback"] = function () {
-							resolve();
-						}
-						vds.widget.execute(vds.window.getCode(), "showModalUrl", [params]);
+						// params["callback"] = function () {
+						// 	resolve();
+						// }
+						// vds.widget.execute(vds.window.getCode(), "showModalUrl", [params]);
+						var promise = vds.browser.dialog(url, params);
+						promise.then(resolve).catch(reject);
 					} else {
-						var config = {};
-						config.url = url; //创建webview后请求的url地址，需要带http://或https://            （打开H5窗体时必填）
-						config.onClose = function () {
-							resolve();
-						};
-						webViewService.openUrl(config);//???
+						// var config = {};
+						// config.url = url; //创建webview后请求的url地址，需要带http://或https://            （打开H5窗体时必填）
+						// config.onClose = function () {
+						// 	resolve();
+						// };
+						// webViewService.openUrl(config);//???
+						var promise = vds.browser.dialog(url);
+						promise.then(resolve).catch(reject);
 					}
 				}
 				//			rendererUtil.showModelessDialogEx("openLink", url, title,null,width,height);
@@ -249,50 +255,56 @@ var main = function (ruleContext) {
 				}
 			} else if (targetType == TARGET_TYPE_DIV_CONTAINER) { //在div容器打开
 				//			windowInputParams["variable"]["formulaOpenMode"] = "vuiWindowContainer";
-				var widgetId = inParamObj.divCode;
-				var containerCode = inParamObj.targetComponentContainerCode;
-				var _setWidget = ruleContext.genAsynCallback(function (_closeParams) {
-					return function(){
-						vds.widget.execute(widgetId, "setfireVueEvent", [_closeParams]);
-					}
-				})
-				var callBackFunc = function (params) {
-					if (!params)
-						return;
-					var exist = params.existIden === true ? true : false;
-					if (!exist) { //之前未打开过
-						var closeParams = {
-							widgetId: widgetId,
-							vuiCode: containerCode,
-							eventName: "close",
-							params: {
-								tagIden: params._iden
-							}
-						}
-						var closeFunc = _setWidget(closeParams);
-						//注册跨域关闭事件
-						eventManager.onCrossDomainEvent({//???应该在控件内部处理
-							eventName: eventManager.CrossDomainEvents.ContainerWindowClose,
-							handler: closeFunc
-						});
-					}
-				}
-				var closeback = function (params) {}
+				// var widgetId = inParamObj.divCode;
+				// var containerCode = inParamObj.targetComponentContainerCode;
+				// var _setWidget = ruleContext.genAsynCallback(function (_closeParams) {
+				// 	return function(){
+				// 		vds.widget.execute(widgetId, "setfireVueEvent", [_closeParams]);
+				// 	}
+				// })
+				// var callBackFunc = function (params) {
+				// 	if (!params)
+				// 		return;
+				// 	var exist = params.existIden === true ? true : false;
+				// 	if (!exist) { //之前未打开过
+				// 		var closeParams = {
+				// 			widgetId: widgetId,
+				// 			vuiCode: containerCode,
+				// 			eventName: "close",
+				// 			params: {
+				// 				tagIden: params._iden
+				// 			}
+				// 		}
+				// 		var closeFunc = _setWidget(closeParams);
+				// 		//注册跨域关闭事件
+				// 		eventManager.onCrossDomainEvent({//???应该在控件内部处理
+				// 			eventName: eventManager.CrossDomainEvents.ContainerWindowClose,
+				// 			handler: closeFunc
+				// 		});
+				// 	}
+				// }
+				// var closeback = function (params) {}
 
-				var containerParam = {
-					containerCode: containerCode,
-					/* 这个是标签的code */
-					// componentCode: componentCode,
-					// windowCode: windowCode,
-					OpenMode: "OpenLink",
-					callback: callBackFunc,
-					closeback: closeback,
-					url: url,
-					divCode: widgetId,
-					/* 这个是标签所在div的code */
-					title: title
-				}
-				vds.widget.execute(widgetId, "setopenWindowToDivContainer", [containerParam]);
+				// var containerParam = {
+				// 	containerCode: containerCode,
+				// 	/* 这个是标签的code */
+				// 	// componentCode: componentCode,
+				// 	// windowCode: windowCode,
+				// 	OpenMode: "OpenLink",
+				// 	callback: callBackFunc,
+				// 	closeback: closeback,
+				// 	url: url,
+				// 	divCode: widgetId,
+				// 	/* 这个是标签所在div的code */
+				// 	title: title
+				// }
+				// vds.widget.execute(widgetId, "setopenWindowToDivContainer", [containerParam]);
+				isFinish = false;
+				var promise = vds.browser.renderToDivContainerByUrl(url, widgetId, containerCode, {
+					title:title,
+					ruleContext:ruleContext
+				});
+				promise.then(reject).catch(reject);
 			} else if (targetType == TARGET_TYPE_IEMS_HOME_TAB) {
 				isFinish = false;
 				var returnMappings;
@@ -307,7 +319,7 @@ var main = function (ruleContext) {
 						}
 					}
 					if (setResult) {
-						setResult(ruleContext, isConfirmSelectionOnClose, businessRuleResult["isConfirmSelectionOnClose"]);
+						setResult(ruleContext, "isConfirmSelectionOnClose", businessRuleResult["isConfirmSelectionOnClose"]);
 					}
 					resolve();
 				}
@@ -334,15 +346,6 @@ var setResult = function (ruleContext, code, value) {
 	if (ruleContext.setResult) {
 		ruleContext.setResult(code, value)
 	}
-}
-//加载表达式计算模块
-//	var formulaUtil ;
-var webViewService;
-var eventManager;
-
-exports.initModule = function (sandBox) {
-	webViewService = sandBox.getService("vjs.framework.extension.platform.services.integration.render");
-	eventManager = sandBox.getService("vjs.framework.extension.platform.interface.event.EventManager");
 }
 //dengb:去掉来源类型的判断逻辑，现在只要一直来源就是表达式
 //值类型(1:实体字段,2:系统变量,3:组件变量,4:常量,5:自定义,6:表达式)
