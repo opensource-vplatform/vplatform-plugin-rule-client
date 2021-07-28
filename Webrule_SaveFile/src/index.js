@@ -382,11 +382,16 @@ function getNum(sourceValue, reject) {
 	if (sourceValue == null || sourceValue == "") {
 		return 0;
 	}
-	if (!vds.object.isNumber(sourceValue) || Number(sourceValue) == "NaN") {
+	if (!isNum(sourceValue) || Number(sourceValue) == "NaN") {
 		throw vds.exception.newConfigException("图片质量不是数字，请检查");
 	}
 	return Number(sourceValue);
 }
+
+var isNum = function(arg1) {
+	var re = /^(\+|-)?\d+(?:\.\d+)?$/;
+	return re.test(arg1);
+};
 
 /**
  * desc 执行表达式
