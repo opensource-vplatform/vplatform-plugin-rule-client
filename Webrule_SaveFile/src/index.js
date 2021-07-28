@@ -231,7 +231,6 @@ var save2Native = function (ruleContext, inParamObj, resolve, reject) {
 			if (imagePath && imagePath.length > 0) {
 				//上传后的回调,设置规则返回值
 				var uploadSuccess = function (results) {
-					alert(5);
 					if (results && undefined != results.success && (results.success == false || results.success == "false")) {
 						setResult(ruleContext, false);
 						reject(vds.exception.newConfigException("上传图片不成功"));
@@ -315,23 +314,18 @@ var save2App = function (sourceFilePath, callback, resolve) {
 		}
 		var fileTransfer = new FileTransfer();
 		var uri = encodeURI(fPath);
-		alert(fileURL + "@@@" + typeof(fileTransfer.download));
 		try{
 			fileTransfer.download(uri, fileURL, function (entry) {
-					alert(1 + ",entry: " + entry== null);
 					results.push(entry.nativeURL);
 					fileIndex++;
-					vds.progress.hideProgress();
+					vds.progress.hide();
 					if (fileIndex == sourceFilePath.length) {
-						alert(2);
 						callback(results);
 					} else {
-						alert(3);
 						resolve();
 					}
 				},function (error) {
-					alert(4);
-					vds.progress.hideProgress();
+					vds.progress.hide();
 					alert("保存失败");
 					callback(error);
 				}, false, {
