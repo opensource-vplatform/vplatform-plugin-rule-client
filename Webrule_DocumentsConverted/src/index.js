@@ -37,8 +37,10 @@ var main = function (ruleContext) {
 	return new Promise(function (resolve, reject) {
 		try {
 			var inParamObj = ruleContext.getVplatformInput();
-			if (!check(inParamObj))
+			if (!check(inParamObj)) {
+				resolve();
 				return;
+			}
 
 			var params = {
 				condSqls: [], //查询条件
@@ -92,11 +94,11 @@ var main = function (ruleContext) {
 				"datas": [{
 					"code": "InParams",
 					"type": "char",
-					"Value": vds.string.toJson(params)
+					"value": vds.string.toJson(params)
 				}],
 				"params": { "isAsyn": false, "ruleContext": ruleContext }
 			}
-			var promise = vds.rpc.callCommand(sConfig.command, params.datas, params.params);
+			var promise = vds.rpc.callCommand(sConfig.command, sConfig.datas, sConfig.params);
 			promise.then(callback).catch(callback);
 		} catch (ex) {
 			reject(ex);

@@ -31,6 +31,7 @@ var main = function (ruleContext) {
 					var datasource = vds.ds.lookup(dsNames[0]);
 					var record = datasource.getCurrentRecord();
 					if (!record) {
+						resolve();
 						return;
 					}
 					flag = false;

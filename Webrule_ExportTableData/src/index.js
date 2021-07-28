@@ -14,9 +14,7 @@ var main = function (ruleContext) {
             if (!params["gridId"]) {
                 gridWidgetId = params["gridDsName"];
             }
-            var dsNames = vds.widget.getDatasourceCodes({
-                "widgetCode": gridWidgetId
-            });
+            var dsNames = vds.widget.getDatasourceCodes(gridWidgetId);
             var dataSource = dsNames[0];
             var exportColumns = params["exportColumns"];
             if (gridWidgetId == null || gridWidgetId == "") {
@@ -241,9 +239,9 @@ var findGridFields = function (widgetId, dataSourceName) {
     var datasource = vds.ds.lookup(dataSourceName);
     var metadata = datasource.getMetadata();
     var metaFields = metadata.getFields();
-    var widget = vds.widget.getProperty(widgetId, "widgetObj");
-    var headerSpans = widget.widgetObj._headerSpans;
-    var rowsFixedCount = widget.widgetObj._getHeaderRowNum(headerSpans);
+    var widgetObj = vds.widget.getProperty(widgetId, "widgetObj");
+    var headerSpans = widgetObj._headerSpans;
+    var rowsFixedCount = widgetObj._getHeaderRowNum(headerSpans);
     // 是否单行表头
     var isSingleHeadRows = (rowsFixedCount == 1);
     var propertiesList = vds.widget.execute(widgetId, "getFields");
@@ -251,7 +249,7 @@ var findGridFields = function (widgetId, dataSourceName) {
     var columns = [];
 
     // TODO: 新方案处理多行列表头
-    var spanMap = widget.widgetObj._widget.spanMap;
+    var spanMap = widgetObj._widget.spanMap;
     var getSpanName = function (headerIndex, tarColumnName, spansMap, seq) {
         if (!spansMap)
             return;

@@ -14,7 +14,8 @@ var isNotEmpty = function (str) {
  * 校验是否数字
  */
 var judgeNumExt = function (num) {
-	return vds.object.isNumber(num);
+	var re = /^(\+|-)?\d+(?:\.\d+)?$/;
+    return re.test(num)
 }
 
 /**
@@ -360,6 +361,7 @@ var main = function (ruleContext) {
 					} else {
 						vds.log.error("实体[" + dbCode + "]不存在");
 						resolve();
+						return false
 					}
 				}
 			}

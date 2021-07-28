@@ -68,7 +68,7 @@ var main = function (ruleContext) {
                     whereRestrict.addCondition(queryConds);
                 }
 
-                params = genCustomParams(itemqueryparam, ruleContext);
+                var params = genCustomParams(itemqueryparam, ruleContext);
                 whereRestrict.addParameters(params);
 
                 var paginationObj = getPagingInfoByDataSource(entityName);
@@ -109,7 +109,11 @@ var main = function (ruleContext) {
                     }
                 }
 
-                var senior = { "command": "CommonRule_DynamicCrossDataToInterfaceEntity", "groupCrossConfig": tableOrQuery };
+                var senior = {
+                    "command": "CommonRule_DynamicCrossDataToInterfaceEntity",
+                     "groupCrossConfig": tableOrQuery,
+                     "type": isType
+                };
                 var newFieldMappings = [];
                 for (var j = 0, _l = mappings.length; j < _l; j++) {
                     var _map = mappings[j];
@@ -123,7 +127,7 @@ var main = function (ruleContext) {
                         "value": _map["sourceName"]
                     })
                 }
-                var destEntity = getDatasource(destName, "", ruleContext.getMethodContext());
+                var destEntity = getDatasource(entityName, "", ruleContext.getMethodContext());
                 var promise = vds.rpc.queryData(sourceName, queryType, destEntity, newFieldMappings, {
                     "where": whereRestrict,
                     "pageConfig": {

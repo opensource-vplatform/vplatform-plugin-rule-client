@@ -23,7 +23,7 @@ var main = function (ruleContext) {
 			var sepcialStrArr = ["/", "%", "_", "[", "]"]; //特殊字符
 			var params = ruleContext.getVplatformInput();
 
-			var dataSource = params["dataSource"];
+			var dataSourceName = params["dataSource"];
 			var dsColumn = params["dsColumn"];
 			var length = params["length"];//流水号位数
 			if ((length != undefined) && (length != "") && (length != null)) {
@@ -186,15 +186,16 @@ var main = function (ruleContext) {
 						// 临时方案：没有选中行数据，取当前行数据
 						// 解决协同平台设计管理 单据编号新增实体记录后不能获取选中数据问题
 						var datasource = vds.ds.lookup(dataSourceName);
-						var selectedValues = datasource.getCurrentRecord();
-						if (selectedValues && selectedValues.length > 0) {
+						var selectedValues = datasource.getSelectedRecords();
+						if (selectedValues && selectedValues.toArray().length > 0) {
+							selectedValues = selectedValues.toArray();
 							for (var i = 0; i < selectedValues.length; i++) {
 								ids.push(selectedValues[i].getSysId());
 							}
 						}
 						break;
 					case "1": //所有行
-						var datasource = vds.ds.lookup(dataSource);
+						var datasource = vds.ds.lookup(dataSourceName);
 						var selectedValues = datasource.getAllRecords();
 						if (selectedValues && selectedValues.toArray().length > 0) {
 							selectedValues = selectedValues.toArray();
@@ -204,7 +205,7 @@ var main = function (ruleContext) {
 						}
 						break;
 					case "2": //字段为空的记录
-						var datasource = vds.ds.lookup(dataSource);
+						var datasource = vds.ds.lookup(dataSourceName);
 						var selectedValues = datasource.getAllRecords();
 						if (selectedValues && selectedValues.toArray().length > 0) {
 							selectedValues = selectedValues.toArray();
@@ -221,7 +222,7 @@ var main = function (ruleContext) {
 				}
 
 				var values = [];
-				var ds = vds.ds.lookup(dataSource);
+				var ds = vds.ds.lookup(dataSourceName);
 				var dtds = [];
 				//标记规则为异步
 				for (var i = 0; i < ids.length; i++) {
@@ -236,7 +237,7 @@ var main = function (ruleContext) {
 									var windowCode = vds.window.getCode();
 									//不缓存流水号时，传入映射的表和表字段
 									if (isReuseSerialNumber) {
-										var sourceName = dataSource;
+										var sourceName = dataSourceName;
 										var sourceColumn = dsColumn;
 										if (relationTable != undefined && relationTable != null && relationTable != "") {
 											sourceName = relationTable;
@@ -263,11 +264,11 @@ var main = function (ruleContext) {
 												}
 											})(dtd)
 										};
-										getSerialNumber(params);
+										getSerialNumber(params, reject);
 									} else {
 										var params = {
 											"moduleId": windowCode,
-											"TableName": dataSource,
+											"TableName": dataSourceName,
 											"TableColumn": dsColumn,
 											"prefix": prefix,
 											"Length": length,
@@ -284,7 +285,7 @@ var main = function (ruleContext) {
 												}
 											})(dtd)
 										};
-										getSerialNumber(params);
+										getSerialNumber(params, reject);
 									}
 								}
 							} else { // 如果有多个流水号，那么从二个流水号开始，都取第一个流水号的值
@@ -326,7 +327,7 @@ var main = function (ruleContext) {
 	});
 };
 
-var getSerialNumber = function (params) {
+var getSerialNumber = function (params, reject) {
 	var moduleId = params.moduleId;
 	var TableName = params.TableName;
 	var TableColumn = params.TableColumn;
@@ -340,8 +341,10 @@ var getSerialNumber = function (params) {
 	var isAsync = params.isAsync;
 	var expression = "GetSerialNumberFunc(\"" + TableName + "\",\"" + TableColumn + "\",\"" + prefix + "\",\"" + Length + "\",\"" + CoverLetter + "\",\"" + likeValStr + "\",\"" + subLength + "\",\"" + isLeftSubFlag + "\",\"" + isReuseSerialNumber + "\")";
 	var paramData = { "expression": expression };
-	var promise = vds.rpc.command("WebExecuteFormulaExpression", paramData, {
+	var promise = vds.rpc.callCommand("WebExecuteFormulaExpression", null, {
 		"isAsync": isAsync,
+		"isOperation": true,
+		"operationParam": paramData,
 		"isRuleSetCode": false
 	});
 	promise.then(function (rs) {

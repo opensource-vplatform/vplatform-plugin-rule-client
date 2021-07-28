@@ -15,11 +15,13 @@ var main = function (ruleContext) {
 
 			if (!dataType || "" == dataType) {
 				vds.log.error("[GenerateXMLOrJSON.main]生成数据格式未进行设置，请检查配置是否正确");
+				resolve();
 				return false;
 			}
 
 			if (!dataDetail || dataDetail.length <= 0 || !vds.object.isArray(dataDetail)) {
 				vds.log.error("[GenerateXMLOrJSON.main]数据内容未进行设置，请检查配置是否正确");
+				resolve();
 				return false;
 			}
 

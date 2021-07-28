@@ -16,6 +16,7 @@ var main = function (ruleContext) {
 			if (lon1 == null || lat1 == null) {
 				vds.message.warn("经度或纬度值为null，请检查。", null, false);
 				setBusinessRuleResult(ruleContext, null, null);
+				resolve();
 				return;
 			}
 

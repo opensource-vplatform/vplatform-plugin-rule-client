@@ -397,11 +397,11 @@ var setVarValue = function (destName, destType, sourceValue, ruleContext) {
 			var dataSource = vds.ds.lookup(dsName);
 			var record = dataSource.getCurrentRecord();
 			if (!record) {
-				record = datasource.createRecord();
-				datasource.insertRecords([record]);
+				record = dataSource.createRecord();
+				dataSource.insertRecords([record]);
 			}
 			record.set(fieldName, sourceValue);
-			datasource.updateRecords([record]);
+			dataSource.updateRecords([record]);
 			break;
 		case "windowVariant":
 			vds.window.setInput(destName, sourceValue);

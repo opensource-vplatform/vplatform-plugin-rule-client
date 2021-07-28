@@ -10,6 +10,7 @@ function main(ruleContext) {
 			var inParamObj = ruleContext.getVplatformInput();
 			if (!check(inParamObj)) {
 				resolve();
+				return;
 			}
 
 			var params = {

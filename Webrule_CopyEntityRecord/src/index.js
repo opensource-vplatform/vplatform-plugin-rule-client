@@ -748,10 +748,10 @@ var _getEntityDS = function (entityType, entityName, ruleContext) {
     if (entityType == ENTITY_TYPE.ENTITY) {
         var ds = vds.ds.lookup(entityName);
     } else if (entityType == ENTITY_TYPE.WINDOWINPUT) {
-        ds = vds.window.getInput({ "code": entityName });
+        ds = vds.window.getInput(entityName);
         errMsg = "窗体输入";
     } else if (entityType == ENTITY_TYPE.WINDOWOUTPUT) {
-        ds = vds.window.getOutput({ "code": entityName });
+        ds = vds.window.getOutput(entityName);
         errMsg = "窗体输出";
     } else if (entityType == ENTITY_TYPE.RULESETINPUT) {
         ds = ruleContext.getMethodContext().getInput(entityName);

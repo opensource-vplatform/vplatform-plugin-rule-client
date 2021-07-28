@@ -38,8 +38,10 @@ function main(ruleContext) {
 	return new Promise(function (resolve, reject) {
 		try {
 			var inParamObj = ruleContext.getVplatformInput();
-			if (!check(inParamObj))
+			if (!check(inParamObj)) {
+				resolve();
 				return;
+			}
 
 			// 处理查询条件
 			var condCfgs = inParamObj.condition;
@@ -70,7 +72,7 @@ function main(ruleContext) {
 
 			//处理字段对应关系中的参数:组件变量/系统变量/自定义值
 			var result = ParamField(inParamObj.equalFields, null, ruleContext);
-			params.equalFields.push(result.itemsConverted);
+			params.equalFields = result.itemsConverted;
 			if (params.condParams != null) {
 				var paramMap = result.paramMap;
 				$.extend(params.condParams, paramMap);

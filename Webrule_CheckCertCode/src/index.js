@@ -37,6 +37,7 @@ var main = function (ruleContext) {
 				if ("fileID" != buildTargetType) {
 					//设置返回值
 					setBusinessRuleResult(ruleContext, false, resolve);
+					return;
 				}
 			}
 

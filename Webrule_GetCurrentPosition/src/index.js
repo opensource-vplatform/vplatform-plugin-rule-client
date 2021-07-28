@@ -7,7 +7,7 @@ vds.import("vds.app.*");
 var main = function (ruleContext) {
 	return new Promise(function (resolve, reject) {
 		try {
-			var success = function (rs) {
+			var success = function (result) {
 				if (ruleContext.setResult) {
 					//纬度
 					ruleContext.setResult("latitude", result.coords.latitude);
@@ -17,7 +17,7 @@ var main = function (ruleContext) {
 				}
 				resolve();
 			}
-			var error = function (rs) {
+			var error = function (result) {
 				if (ruleContext.setResult) {
 					ruleContext.setResult("isSuccess", false);
 				}

@@ -109,6 +109,7 @@ var main = function (ruleContext) {
 					ds.clear();
 				}
 				resolve();
+				return true;
 			}
 
 			var destQueryCond = {};
@@ -148,7 +149,8 @@ var main = function (ruleContext) {
 				var success = responseObj.IsSuccess;
 				if (!success) {
 					vds.log.error("错误信息：" + result.msg);
-					throw new Error("数据比较执行异常！");
+					var exception = new Error("数据比较执行异常！");
+					reject(exception);
 				} else {
 					var finalResultsValue = responseObj.CompareResults;
 					var finalResults = vds.object.stringify(finalResultsValue);
