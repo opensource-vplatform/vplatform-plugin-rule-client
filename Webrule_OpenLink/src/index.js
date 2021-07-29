@@ -104,9 +104,7 @@ var main = function (ruleContext) {
 			var isFinish = true;
 			//当前页面打开
 			if (targetType == TARGET_TYPE_CUR_PAGE) {
-				vds.browser.redirectByUrl({
-					url: url
-				});
+				vds.browser.redirectByUrl(url);
 				//			window.location.href=url;
 			} else if (targetType == TARGET_TYPE_COMPONENT_NEW_TAB) {
 				/* 新页签打开方式 */
@@ -255,8 +253,8 @@ var main = function (ruleContext) {
 				}
 			} else if (targetType == TARGET_TYPE_DIV_CONTAINER) { //在div容器打开
 				//			windowInputParams["variable"]["formulaOpenMode"] = "vuiWindowContainer";
-				// var widgetId = inParamObj.divCode;
-				// var containerCode = inParamObj.targetComponentContainerCode;
+				var widgetId = inParamObj.divCode;
+				var containerCode = inParamObj.targetComponentContainerCode;
 				// var _setWidget = ruleContext.genAsynCallback(function (_closeParams) {
 				// 	return function(){
 				// 		vds.widget.execute(widgetId, "setfireVueEvent", [_closeParams]);
@@ -304,7 +302,7 @@ var main = function (ruleContext) {
 					title:title,
 					ruleContext:ruleContext
 				});
-				promise.then(reject).catch(reject);
+				promise.then(resolve).catch(reject);
 			} else if (targetType == TARGET_TYPE_IEMS_HOME_TAB) {
 				isFinish = false;
 				var returnMappings;
