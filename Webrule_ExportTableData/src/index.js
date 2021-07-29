@@ -305,7 +305,8 @@ var findGridFields = function (widgetId, dataSourceName) {
                     "width": cellWidth,
                     "isFieldColumn": true,
                     "AllowMerge": properties.AllowMerge, //允许合并
-                    "MergeColumnNames": properties.MergeColumnNames//合并条件字段
+                    "MergeColumnNames": properties.MergeColumnNames, //合并条件字段
+                    "displayFormat":properties.displayFormat
                 };
 
                 curHeadRowInfo.push(columnCfg);

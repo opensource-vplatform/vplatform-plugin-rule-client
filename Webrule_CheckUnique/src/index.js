@@ -126,7 +126,7 @@ var checkTableUnique = function (entityName, tableName, checkFields, dsWhere, is
     var fieldType = {};
     var fields = datasource.getMetadata().getFields();
     for (var i = 0; i < fields.length; i++) {
-        fieldType[fields[i]["code"]] = fields[i]["type"];
+        fieldType[fields[i].getCode()] = fields[i].getType();
     }
 
     var tmpCondition = {};
@@ -245,16 +245,7 @@ var getCondition = function (field, value, fieldType, operation, allCondition) {
 
 /** 检测后台表数据 */
 var getTableRecords = function (tableName, whereRestrict, tmpNullIn, isAutoSelectRepeatRow, filterCondition, datasource, ruleContext, resolve, reject) {
-    var promise = vds.rpc.queryData(tableName, "table", null, null, {
-        "where": whereRestrict,
-        "pageConfig": {
-            "pageSize": -0,
-            "recordStart": 0,
-        },
-        "methodContext": ruleContext.getMethodContext(),
-        "CheckUnique": true
-    });
-    promise.then(function (resultData) {
+    var callback = function (resultData) {
         var isRepeat = false;
         if (vds.object.isArray(resultData) && resultData.length > 0) {
             var ds = resultData[0];
@@ -293,7 +284,19 @@ var getTableRecords = function (tableName, whereRestrict, tmpNullIn, isAutoSelec
         else {
             setResult(ruleContext, isRepeat, resolve);
         }
-    }).catch(reject);
+    }
+
+    vds.rpc.queryDataSync(tableName, "table", null, null, {
+        "where": whereRestrict,
+        "pageConfig": {
+            "pageSize": -0,
+            "recordStart": 0,
+        },
+        "methodContext": ruleContext.getMethodContext(),
+        "CheckUnique": true,
+        "success": callback,
+        "fail": reject
+    });
 }
 
 /** 处理字段映射条件 */
