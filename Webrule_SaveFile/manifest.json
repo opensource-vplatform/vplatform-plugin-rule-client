@@ -1,7 +1,7 @@
 {
     "groupId": "com.toone.v3.platform",
     "code": "Webrule_SaveFile",
-    "version":"3.6.0",
+    "version":"3.7.0",
     "plugins": [{
         "type": "rule",
         "code": "SaveFile",

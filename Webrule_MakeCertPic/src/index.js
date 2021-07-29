@@ -36,18 +36,28 @@ var main = function (ruleContext) {
 					}
 					resolve();
 				}
-				var promise = vds.rpc.callCommand("FileCertImage", [], {
+				//原规则同步，暂时不能调用异步
+				var promise = vds.rpc.callCommandSync("FileCertImage", [], {
 					"isAsync": false,
-					"isRuleSetCode": false
+					"isRuleSetCode": false,
+					"success":function (datas) {
+						if (datas && datas.success) {
+							success();
+						} else {
+							var promise = vds.message.error("生成验证码失败" + (datas.msg ? ", 错误信息：" + datas.msg : ""));
+							promise.then(resolve).catch(reject);
+						}
+					},
+					"fail":reject
 				});
-				promise.then(function (datas) {
-					if (datas && datas.success) {
-						success();
-					} else {
-						var promise = vds.message.error("生成验证码失败" + (datas.msg ? ", 错误信息：" + datas.msg : ""));
-						promise.then(resolve).catch(reject);
-					}
-				}).catch(reject);
+				// promise.then(function (datas) {
+				// 	if (datas && datas.success) {
+				// 		success();
+				// 	} else {
+				// 		var promise = vds.message.error("生成验证码失败" + (datas.msg ? ", 错误信息：" + datas.msg : ""));
+				// 		promise.then(resolve).catch(reject);
+				// 	}
+				// }).catch(reject);
 			} else {
 				//xx参数防止图片组件接受相同地址时不刷新问题
 				var url = vds.environment.getContextPath() + 'module-operation!executeOperation?moduleId=' + moduleId + '&operation=FileCertImage&xx=' + vds.string.uuid();

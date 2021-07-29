@@ -46,8 +46,8 @@ var main = function (ruleContext) {
 						var newFieldMappings = [];
 						var fileMappings = dataSourceMapping["dataMap"];
 						if (fileMappings instanceof Array) {
-							for (var i = 0, len = fileMappings.length; i < len; i++) {
-								var map = fileMappings[i];
+							for (var j = 0, len = fileMappings.length; j < len; j++) {
+								var map = fileMappings[j];
 								var field = map.colName;
 								if (field.indexOf(".") != -1) {
 									field = field.split(".")[1];

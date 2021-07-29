@@ -52,7 +52,6 @@ var saveFile = function (fileUrl, fileName, resolve, reject) {
 	var failCB = function (error) {
 		reject(vds.exception.newConfigException("保存失败；" + error.message));
 	};
-	alert(fileUrl + "@" + fileName);
 	var promise = vds.app.saveImage(fileUrl, fileName);
 	promise.then(resolve).catch(failCB);
 }
@@ -72,7 +71,6 @@ var executeExpression = function (expression, callback, reject) {
 		"isRuleSetCode": false
 	});
 	promise.then(function (rs) {
-		alert(JSON.stringify(rs));
 		result = rs.data.result;
 		callback(result);
 	}).catch(reject);

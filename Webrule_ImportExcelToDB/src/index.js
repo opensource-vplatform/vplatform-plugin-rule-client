@@ -143,7 +143,14 @@ var main = function (ruleContext) {
 			// 文件选择事件中出发后续逻辑
 			// 逻辑完成后触发删除之前创建的input表单
 			if (useAttachment) {
-				vds.widget.execute(fileSource, "importData", [configs, resolve, reject])
+				var callback = function(arg2, error){
+					if(error instanceof Error || vds.exception.isException(error)){
+						reject(error);
+					}else{
+						resolve();
+					}
+				}
+				vds.widget.execute(fileSource, "importData", [configs, callback])
 			} else {
 				var promise = vds.rpc.importExcel(configs, ruleContext.getMethodContext());
 				promise.then(resolve).catch(reject);
