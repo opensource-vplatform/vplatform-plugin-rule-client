@@ -2,27 +2,13 @@
  * 从数据库加载数据到报表
  */
 
-var widgetContext;
-var ScopeManager, routeEngine;
-var dataQuery, windowRoute, componentRoute;
-
-exports.initModule = function (sBox) {
-	widgetContext = sBox.getService("vjs.framework.extension.platform.services.view.widget.common.context.WidgetContext");
-	ScopeManager = sBox.getService("vjs.framework.extension.platform.interface.scope.ScopeManager");
-	routeEngine = sBox.getService("vjs.framework.extension.platform.services.engine.route.RouteEngine");
-	dataQuery = sBox.getService("vjs.framework.extension.platform.services.repository.query");
-	windowRoute = sBox.getService("vjs.framework.extension.platform.data.storage.schema.route.WindowRoute");
-	componentRoute = sBox.getService("vjs.framework.extension.platform.data.storage.schema.route.ComponentRoute");
-};
-
-vds.import("vds.component.*", "vds.ds.*", "vds.expression.*", "vds.log.*", "vds.message.*", "vds.object.*", "vds.rpc.*", "vds.string.*", "vds.widget.*", "vds.window.*");
+vds.import("vds.component.*", "vds.ds.*", "vds.expression.*", "vds.log.*", "vds.method.*", "vds.message.*", "vds.object.*", "vds.rpc.*", "vds.string.*", "vds.widget.*", "vds.window.*");
 
 var main = function (ruleContext) {
 	return new Promise(function (resolve, reject) {
 		try {
-			var scope = ScopeManager.getScope();
 			var componentCode = vds.component.getCode();
-			var windowCode = scope.getWindowCode();
+			var windowCode = vds.window.getCode();
 
 			var inParamsObj = ruleContext.getVplatformInput();
 			var isAsyn = inParamsObj.isAsyn; //是否异步
@@ -49,14 +35,18 @@ var main = function (ruleContext) {
 			//获取"打印方式"完成事件
 			var afterGetReportEdition = function (result) {
 				var success = result["success"];
-				if (success != true)
+				if (success != true) {
+					resolve();
 					return;
+				}
 
 				var data = result["data"];
 				var reportEdition = data.reportEdition
 				var isRight = checkItemConfigs(ruleContext, reportEdition, itemConfigs);
-				if (false == isRight)
+				if (false == isRight) {
+					resolve();
 					return;
+				}
 
 				arrangeItems(itemConfigs);
 
@@ -71,7 +61,7 @@ var main = function (ruleContext) {
 									reportCfg.dataSource = reportCfg.dataSource.replace("|", ";");
 								}
 								//将报表信息加载到报表控件
-								var reportData = getRemoteData(itemConfigs, ruleContext);
+								var reportData = getRemoteData(itemConfigs, ruleContext, reject);
 								if (reportControlCode) {
 									//执行JGReportAction.js的draw方法
 									vds.widget.execute(reportControlCode, "draw", [reportData, reportCfg]);
@@ -82,6 +72,8 @@ var main = function (ruleContext) {
 									window['VReport'] = window[curReportID];
 									//执行脚本
 									exeExtendJs(itemConfigs);
+
+									resolve();
 								}
 							} else {
 								throw new Error("加载报表文件出错:" + result.msg);
@@ -101,21 +93,24 @@ var main = function (ruleContext) {
 							"type": "char",
 							"value": vds.string.toJson(loadReportFileParams)
 						}],
-						"params": { "isAsyn": false, "isRuleSetCode": false }
+						"params": { "isAsyn": false }
 					}
+
+					var _afterLoadReportFile = ruleContext.genAsynCallback(afterLoadReportFile);
 					var promise = vds.rpc.callCommand(sConfig.command, sConfig.datas, sConfig.params);
-					promise.then(afterLoadReportFile);
+					promise.then(_afterLoadReportFile).catch(reject);
 				} else {
 					//打印方式为"TooneReport"
 					registEventForTooneReport(componentCode, windowCode, reportControlCode, reportEvents, ruleContext);
 					getRequestForTooneReport(itemConfigs, ruleContext);
-					getRemoteDataForTooneReport(ruleContext, reportType, reportCode, reportControlCode, itemConfigs, operateType);
+					getRemoteDataForTooneReport(ruleContext, reportType, reportCode, reportControlCode, itemConfigs, operateType, resolve, reject);
 				}
 			}
 
 			//获取"打印方式"
+			var _afterGetReportEdition = ruleContext.genAsynCallback(afterGetReportEdition);
 			var promise = vds.rpc.callCommand("GetReportEdition", [], { "isAsyn": isAsyn, isRuleSetCode: false });
-			promise.then(afterGetReportEdition);
+			promise.then(_afterGetReportEdition).catch(reject);
 		} catch (ex) {
 			reject(ex);
 		}
@@ -257,7 +252,7 @@ var exeExtendJs = function (itemConfigs) {
 }
 
 // 获取数据源
-var getRemoteData = function (itemConfigs, ruleContext) {
+var getRemoteData = function (itemConfigs, ruleContext, reject) {
 	var reportDatas = {};
 	for (var i = 0; i < itemConfigs.length; i++) {
 		var itemConfig = itemConfigs[i];
@@ -320,23 +315,21 @@ var getRemoteData = function (itemConfigs, ruleContext) {
 				}
 			}
 
-			var param = [{
-				"dataSourceName": sourceName,
-				"whereRestrict": whereRestrict,
-				"queryRecordStart": -1,
-				"queryPageSize": -1,
-				"queryType": queryType
-			}];
-			var isAsyn = false;
-			dataQuery.query({
-				"queryParams": param,
-				"isAsync": isAsyn,
+			vds.rpc.queryDataSync(sourceName, queryType, null, null, {
+				"where": whereRestrict,
+				"pageConfig": {
+					"pageSize": -1,
+					"recordStart": -1,
+				},
+				"methodContext": ruleContext.getMethodContext(),
+				"CheckUnique": true,
 				"success": function (result) {
 					if (result) {
 						var datas = callBack(result[0], items, ruleContext);
 						reportDatas[entityName] = datas;
 					}
-				}
+				},
+				"fail": reject
 			});
 		}
 	}
@@ -477,26 +470,21 @@ var getFromDataBase = function (itemConfig, ruleContext) {
 		}
 	}
 
-	var param = [{
-		"dataSourceName": sourceName,
-		"whereRestrict": whereRestrict,
-		"queryRecordStart": -1,
-		"queryPageSize": -1,
-		"queryType": queryType
-	}];
-
-	var isAsyn = false;
-	var resultObj;
-	dataQuery.query({
-		"queryParams": param,
-		"isAsync": isAsyn,
+	vds.rpc.queryDataSync(sourceName, queryType, null, null, {
+		"where": whereRestrict,
+		"pageConfig": {
+			"pageSize": -1,
+			"recordStart": -1,
+		},
+		"methodContext": ruleContext.getMethodContext(),
 		"success": function (result) {
 			if (result) {
 				resultObj = result[0];
 				datas = callBack(resultObj, items, ruleContext);
 				resultObj.datas = datas;
 			}
-		}
+		},
+		"fail": reject
 	});
 
 	return resultObj;
@@ -580,7 +568,11 @@ var registControlEventItemForTooneReport = function (reportControlCode) {
 	vds.widget.execute(reportControlCode, "registReportEvent", ["CellClick", function (rptData, successCallback, failCallback) {
 		if (rptData && rptData.eventCode) {
 			var ruleSetCode = rptData.eventCode;
-			var promise = vds.method.excute(ruleSetCode);
+			var promise = vds.method.execute(ruleSetCode, {
+				"componentCode": vds.component.getCode(),
+				"windowCode": vds.window.getCode(),
+				"invokeType": "local"
+			});
 			promise.then(successCallback).catch(failCallback);
 		}
 	}]);
@@ -590,72 +582,67 @@ var registEventItemForTooneReport = function (componentCode, windowCode, reportC
 	vds.widget.execute(reportControlCode, "registReportEvent", [eventCode, function (rptData, successCallback, failCallback) {
 		var param = parseParam(invokeParams, componentCode, windowCode, ruleSetCode, "local", "client-ruleSet", ruleContext, rptData);
 		//todo zhouzhiq带参数
-		vds.method.excute({
-			"ruleSetCode": ruleSetCode,
-			"args": param,
-			"success": function (args) {
-				if (!successCallback) {
-					return;
-				}
+		var promise = vds.method.execute(ruleSetCode, param);
+		promise.then(function (args) {
+			if (!successCallback) {
+				return;
+			}
+			var returnArgs = {};
+			if (returnMappings) {
+				for (var j = 0; j < returnMappings.length; j++) {
+					var mapping = returnMappings[j];
+					var srcValue = mapping["srcValue"];
+					var destValue = mapping["destValue"];
+					if (!srcValue || !destValue) {
+						continue;
+					}
+					var fieldMappings = mapping["fieldMapping"];
 
-				var returnArgs = {};
-				if (returnMappings) {
-					for (var j = 0; j < returnMappings.length; j++) {
-						var mapping = returnMappings[j];
-						var srcValue = mapping["srcValue"];
-						var destValue = mapping["destValue"];
-						if (!srcValue || !destValue) {
-							continue;
-						}
-						var fieldMappings = mapping["fieldMapping"];
-
-						var srcDatasource = args[srcValue];
-						if (!srcDatasource) {
-							continue;
-						}
-						var srcObjs = srcDatasource.getAllRecords().datas;
-						if (srcObjs && srcObjs.length > 0) {
-							var srcObj = srcObjs[0];
-							var destObj = {};
-							for (var k = 0; k < fieldMappings.length; k++) {
-								var fieldMapping = fieldMappings[k];
-								var srcType = fieldMapping["srcType"];
-								var srcFieldName = fieldMapping["srcValue"];
-								var destFieldName = fieldMapping["destValue"];
-								if (!destFieldName) {
-									continue;
-								}
-								var items = destFieldName.split(".");
-								if (items.length > 1) {
-									destFieldName = items[1];
-								}
-
-								var value = null;
-								if (srcType && srcType == "expression") {
-									value = getExpressionValue(ruleContext, srcFieldName);
-								} else {
-									var value = srcObj[srcFieldName];
-								}
-								destObj[destFieldName] = value;
+					var srcDatasource = args[srcValue];
+					if (!srcDatasource) {
+						continue;
+					}
+					var srcObjs = srcDatasource.getAllRecords().datas;
+					if (srcObjs && srcObjs.length > 0) {
+						var srcObj = srcObjs[0];
+						var destObj = {};
+						for (var k = 0; k < fieldMappings.length; k++) {
+							var fieldMapping = fieldMappings[k];
+							var srcType = fieldMapping["srcType"];
+							var srcFieldName = fieldMapping["srcValue"];
+							var destFieldName = fieldMapping["destValue"];
+							if (!destFieldName) {
+								continue;
+							}
+							var items = destFieldName.split(".");
+							if (items.length > 1) {
+								destFieldName = items[1];
 							}
 
-							//修改状态
-							var statValue = destObj[STATE_FIELDNAME];
-							if (statValue != ADD_STATE) {
-								destObj[STATE_FIELDNAME] = EDIT_STATE;
+							var value = null;
+							if (srcType && srcType == "expression") {
+								value = getExpressionValue(ruleContext, srcFieldName);
+							} else {
+								var value = srcObj[srcFieldName];
 							}
-
-							returnArgs[destValue] = destObj;
+							destObj[destFieldName] = value;
 						}
+
+						//修改状态
+						var statValue = destObj[STATE_FIELDNAME];
+						if (statValue != ADD_STATE) {
+							destObj[STATE_FIELDNAME] = EDIT_STATE;
+						}
+
+						returnArgs[destValue] = destObj;
 					}
 				}
+			}
 
-				successCallback(returnArgs);
-			},
-			"fail": function (args) {
-				if (!failCallback) {
-					failCallback(args);
-				}
+			successCallback(returnArgs);
+		}).catch(function (args) {
+			if (!failCallback) {
+				failCallback(args);
 			}
 		});
 	}]);
@@ -1103,7 +1090,7 @@ var getRequestForTooneReport = function (itemConfigs, ruleContext) {
 }
 
 //打印方式为"TooneReport"，获取Html数据
-var getHtmlData = function (reportType, reportCode, reportControlCode, itemConfigs) {
+var getHtmlData = function (reportType, reportCode, reportControlCode, itemConfigs, ruleContext, resolve, reject) {
 	var params = {
 		"command": "GetDataBaseDataToReport",
 		"datas": [{
@@ -1130,8 +1117,7 @@ var getHtmlData = function (reportType, reportCode, reportControlCode, itemConfi
 		"params": { "isAsyn": true, "isRuleSetCode": false }
 	}
 
-	var promise = vds.rpc.callCommand(params.command, params.datas, params.params);
-	promise.then(function (result) {
+	var callback = function (result) {
 		var success = result["success"];
 		if (success == true) {
 			var data = result["data"];
@@ -1155,12 +1141,17 @@ var getHtmlData = function (reportType, reportCode, reportControlCode, itemConfi
 
 			//调用JGReportAction.js中的tooneReportHtmlData方法
 			vds.widget.execute(reportControlCode, "tooneReportHtmlData", [cfg]);
+			resolve();
 		}
-	});
+	}
+
+	var _callback = ruleContext.genAsynCallback(callback);
+	var promise = vds.rpc.callCommand(params.command, params.datas, params.params);
+	promise.then(_callback).catch(reject);
 }
 
 //打印方式为"TooneReport"，获取SpreadJs数据
-var getRemoteDataForTooneReport = function (ruleContext, reportType, reportCode, reportControlCode, itemConfigs, operateType) {
+var getRemoteDataForTooneReport = function (ruleContext, reportType, reportCode, reportControlCode, itemConfigs, operateType, resolve, reject) {
 	var readOnly = vds.widget.execute(reportControlCode, "getReadOnly");
 	if (readOnly == null || readOnly == "True")
 		readOnly = true;
@@ -1199,8 +1190,7 @@ var getRemoteDataForTooneReport = function (ruleContext, reportType, reportCode,
 		"params": { "isAsyn": false, "isRuleSetCode": false }
 	}
 
-	var promise = vds.rpc.callCommand(params.command, params.datas, params.params);
-	promise.then(function (result) {
+	var callback = function (result) {
 		var success = result["success"];
 		if (success == true) {
 			var data = result["data"];
@@ -1216,13 +1206,17 @@ var getRemoteDataForTooneReport = function (ruleContext, reportType, reportCode,
 			var isInput = !readOnly;
 			vds.widget.execute(reportControlCode, methodName, [data, isInput]);
 			//清理缓存的报表实体对象
-			var key = "Report@@Entity";
-			var scope = ScopeManager.getScope();
-			scope.set(key, null);
+			// var key = "Report@@Entity";
+			// var scope = ScopeManager.getScope();
+			// scope.set(key, null);
 			//异步获取html数据
-			getHtmlData(reportType, reportCode, reportControlCode, itemConfigs);
+			getHtmlData(reportType, reportCode, reportControlCode, itemConfigs, ruleContext, resolve, reject);
 		}
-	});
+	}
+
+	var _callback = ruleContext.genAsynCallback(callback);
+	var promise = vds.rpc.callCommand(params.command, params.datas, params.params);
+	promise.then(_callback).catch(reject);
 }
 
 
