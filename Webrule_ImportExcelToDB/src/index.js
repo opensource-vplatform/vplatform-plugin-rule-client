@@ -2,7 +2,7 @@
  *
  *
  */
-vds.import("vds.widget.*", "vds.exception.*", "vds.expression.*", "vds.ds.*", "vds.component.*", "vds.window.*", "vds.string.*", "vds.log.*")
+vds.import("vds.widget.*","vds.exception.*","vds.expression.*","vds.ds.*","vds.component.*","vds.window.*","vds.string.*","vds.log.*","vds.rpc.*")
 /**
  * 规则入口
  */
@@ -66,37 +66,37 @@ var main = function (ruleContext) {
 				//			// 得到字段值包括表达式 Express、实体字段 Entity、系统变量 System、组件变量 Component
 				// var varMap = {};
 
-				if(useAttachment){
-					for (var i = 0; i < _inParamObj.dgcolumn.length; i++) {
-						var dgc = _inParamObj.dgcolumn[i];
-						var source = dgc.type;
-						// var fieldCode = dgc.fieldName;
-						var value = dgc.value;
-						if (source === 'Entity') {
-							dataSourceName = value.substring(0, value.indexOf("."));
-							var datasource = vds.ds.lookup(dataSourceName);
-							if (!datasource) {
-								throw vds.exception.newConfigException("实体【" + dataSourceName + "】不存在，请检查配置.");
-							}
-							var currentRow = datasource.getCurrentRecord();
-							var datasource = vds.ds.lookup(changeDsArr[changeIndex]);
-							if (currentRow != null) {
-								dgc["value"] = currentRow.get(value);
-							} else {
-								dgc["value"] = null;
-							}
-						} else if (source === 'System') { //系统变量
-							dgc["value"] = vds.component.getVariant(value);
-						} else if (source === 'Component') { //组件变量
-							dgc["value"] = vds.window.getInput(value);
-						} else if (source === 'Express' || source === 'expression') { //表达式
-							dgc["value"] = vds.expression.execute(value, {
-								"ruleContext": ruleContext
-							});
-						}
-				}
-					// varMapList[_ide] = varMap;
-				}
+				// if(useAttachment){
+				// 	for (var i = 0; i < _inParamObj.dgcolumn.length; i++) {
+				// 		var dgc = _inParamObj.dgcolumn[i];
+				// 		var source = dgc.type;
+				// 		// var fieldCode = dgc.fieldName;
+				// 		var value = dgc.value;
+				// 		if (source === 'Entity') {
+				// 			dataSourceName = value.substring(0, value.indexOf("."));
+				// 			var datasource = vds.ds.lookup(dataSourceName);
+				// 			if (!datasource) {
+				// 				throw vds.exception.newConfigException("实体【" + dataSourceName + "】不存在，请检查配置.");
+				// 			}
+				// 			var currentRow = datasource.getCurrentRecord();
+				// 			var datasource = vds.ds.lookup(changeDsArr[changeIndex]);
+				// 			if (currentRow != null) {
+				// 				dgc["value"] = currentRow.get(value);
+				// 			} else {
+				// 				dgc["value"] = null;
+				// 			}
+				// 		} else if (source === 'System') { //系统变量
+				// 			dgc["value"] = vds.component.getVariant(value);
+				// 		} else if (source === 'Component') { //组件变量
+				// 			dgc["value"] = vds.window.getInput(value);
+				// 		} else if (source === 'Express' || source === 'expression') { //表达式
+				// 			dgc["value"] = vds.expression.execute(value, {
+				// 				"ruleContext": ruleContext
+				// 			});
+				// 		}
+				// 	}
+				// 	// varMapList[_ide] = varMap;
+				// }
 				var config = {
 					tableCode : dataSourceName,
 					treeStruct : treeStruct,
@@ -142,19 +142,24 @@ var main = function (ruleContext) {
 			// 创建好以后出发点击事件
 			// 文件选择事件中出发后续逻辑
 			// 逻辑完成后触发删除之前创建的input表单
-			if (useAttachment) {
-				var callback = function(arg2, error){
-					if(error instanceof Error || vds.exception.isException(error)){
-						reject(error);
-					}else{
-						resolve();
-					}
-				}
-				vds.widget.execute(fileSource, "importData", [configs, callback])
-			} else {
-				var promise = vds.rpc.importExcel(configs, ruleContext.getMethodContext());
-				promise.then(resolve).catch(reject);
-			}
+			// if (useAttachment) {
+			// 	var callback = function(arg2, error){
+			// 		if(error && (error instanceof Error || vds.exception.isException(error) || error.success === false)){
+			// 			reject(error);
+			// 		}else{
+			// 			resolve();
+			// 		}
+			// 	}
+			// 	vds.widget.execute(fileSource, "importData", [configs, callback])
+			// } else {
+			// 	var promise = vds.rpc.importExcel(configs, ruleContext.getMethodContext());
+			// 	promise.then(resolve).catch(reject);
+			// }
+			var promise = vds.rpc.importExcel(configs, {
+				methodContext:ruleContext.getMethodContext(),
+				widgetCode:(useAttachment ? fileSource : undefined)
+			});
+			promise.then(resolve).catch(reject);
 		} catch (err) {
 			reject(err);
 		}
