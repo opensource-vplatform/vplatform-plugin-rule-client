@@ -269,7 +269,7 @@ var handleOpenWindowReturnValues = function (ruleContext, windowReturnValue, ret
 		 * 如果目标是实体类型时，走dbService.insertOrUpdateRecords2Entity，如果是其他类型，则走原来直接赋值的逻辑<br>
 		 * 原来case "entity"分支，由于目标是实体类型，所以已经抽到dbService.insertOrUpdateRecords2Entity中实现，所以在else分支中删除该逻辑<br>
 		 */
-		var _info = _getInfo(destName, destType, ruleContext);
+		var _info = _getInfo(destName, destType, ruleContext.getMethodContext());
 		if (_info.isEntity) {
 			// 如果实体不存在 则不执行更新数据
 			if (sourceValue) {
