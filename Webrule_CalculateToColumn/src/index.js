@@ -38,7 +38,7 @@ var main = function (ruleContext) {
 					calculateValueForSet(datasource, record, destFieldName, value);
 					break;
 				} else if (storeType == vds.widget.StoreType.SingleRecord || storeType == vds.widget.StoreType.SingleRecordMultiValue) {
-					var fields = vds.widget.getFieldCodes(retWidgetId);
+					var fields = vds.widget.getFieldCodes(dsName, retWidgetId);
 					if (fields && fields.length > 0) {
 						for (var i = 0; i < fields.length; i++) {
 							var field = fields[i];
