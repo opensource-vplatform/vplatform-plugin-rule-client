@@ -581,7 +581,6 @@ var registControlEventItemForTooneReport = function (reportControlCode) {
 var registEventItemForTooneReport = function (componentCode, windowCode, reportControlCode, ruleContext, eventCode, ruleSetCode, invokeParams, returnMappings) {
 	vds.widget.execute(reportControlCode, "registReportEvent", [eventCode, function (rptData, successCallback, failCallback) {
 		var param = parseParam(invokeParams, componentCode, windowCode, ruleSetCode, "local", "client-ruleSet", ruleContext, rptData);
-		//todo zhouzhiq带参数
 		var promise = vds.method.execute(ruleSetCode, param);
 		promise.then(function (args) {
 			if (!successCallback) {
@@ -650,6 +649,7 @@ var registEventItemForTooneReport = function (componentCode, windowCode, reportC
 
 var parseParam = function (invokeParams, componentCode, windowCode, ruleSetCode, invokeType, sourceType, ruleContext, rptData) {
 	var param = {};
+	var inputParam = {};
 	//获取活动集配置
 	var ruleSetConfig;
 	if (windowCode) {
@@ -669,21 +669,28 @@ var parseParam = function (invokeParams, componentCode, windowCode, ruleSetCode,
 		//来源类型：1、窗体实体。2、窗体输入实体。3、方法输入实体。4、方法变量实体。5、报表实体
 		var paramSource = invokeObj["paramSource"];
 		if (paramType == "expression") {
-			parseParamForExpression(ruleContext, invokeObj, param, rptData);
+			parseParamForExpression(ruleContext, invokeObj, inputParam, rptData);
 		} else if (paramType == "entity") {
 			if (paramSource == "ReportEntity") {
-				parseParamForReportEntity(ruleContext, invokeObj, param, ruleSetConfig, rptData);
+				parseParamForReportEntity(ruleContext, invokeObj, inputParam, ruleSetConfig, rptData);
 			} else {
-				parseParamForEntity(ruleContext, invokeObj, param, ruleSetConfig);
+				parseParamForEntity(ruleContext, invokeObj, inputParam, ruleSetConfig);
 			}
 		}
 	}
 
+	param.componentCode = componentCode;
+	param.windowCode = windowCode;
+	param.invokeType = invokeType;
+	param.inputParam = inputParam;
+
 	if (sourceType == "server-ruleSet") {
 		return param;
 	}
+
 	//如果调用活动集时，设置了入参，则将此入参的值覆盖到活动集原始配置参数中。
 	var mockParam = {};
+	var mockParamInputParam = {};
 	if (ruleSetConfig && ruleSetConfig.getInputs()) {
 		var ruleSetcfg_inputs = ruleSetConfig.getInputs();
 		for (var i = 0, l = ruleSetcfg_inputs.length; i < l; i++) {
@@ -696,10 +703,10 @@ var parseParam = function (invokeParams, componentCode, windowCode, ruleSetCode,
 				var freeDB = getFreeDB(fieldsMapping);
 				input_value = freeDB;
 			}
-			mockParam[input_code] = input_value;
-			for (var param_code in param) {
+			mockParamInputParam[input_code] = input_value;
+			for (var param_code in inputParam) {
 				if (input_code = param_code) {
-					mockParam[input_code] = param[param_code];
+					mockParamInputParam[input_code] = inputParam[param_code];
 				}
 			}
 		}
@@ -714,19 +721,25 @@ var parseParam = function (invokeParams, componentCode, windowCode, ruleSetCode,
 		if (configData_inputs && configData_inputs.length > 0) {
 			//用configData过滤:只过滤非实体类型。(目前只考虑简单类型的匹配，即非实体类型)
 			if (configData_inputs && configData_inputs.length > 0) {
-				for (var input_code in mockParam) {
+				for (var input_code in mockParamInputParam) {
 					for (var j = 0; j < configData_inputs.length; j++) {
 						var configDataObj = configData_inputs[j];
 						var configDataObj_code = configDataObj.getCode();
 						var configDataObj_initValue = configDataObj.geInitValue();
 						if (input_code == configDataObj_code) {
-							mockParam[input_code] = configDataObj_initValue;
+							mockParamInputParam[input_code] = configDataObj_initValue;
 						}
 					}
 				}
 			}
 		}
 	}
+	
+	mockParam.componentCode = componentCode;
+	mockParam.windowCode = windowCode;
+	mockParam.invokeType = invokeType;
+	mockParam.inputParam = mockParamInputParam;
+
 	return mockParam;
 }
 
@@ -1205,10 +1218,6 @@ var getRemoteDataForTooneReport = function (ruleContext, reportType, reportCode,
 			}
 			var isInput = !readOnly;
 			vds.widget.execute(reportControlCode, methodName, [data, isInput]);
-			//清理缓存的报表实体对象
-			// var key = "Report@@Entity";
-			// var scope = ScopeManager.getScope();
-			// scope.set(key, null);
 			//异步获取html数据
 			getHtmlData(reportType, reportCode, reportControlCode, itemConfigs, ruleContext, resolve, reject);
 		}
