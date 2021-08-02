@@ -1,7 +1,7 @@
 {
     "groupId": "com.toone.v3.platform",
     "code": "Webrule_OpenComponentReturnData",
-    "version":"3.15.0",
+    "version":"3.16.0",
     "plugins": [{
         "type": "rule",
         "code": "OpenComponentReturnData",
