@@ -135,7 +135,8 @@ var getInputParams = function (inputParams, ruleContext) {//入参处理
 		} else {//入参为实体
 			var entityDatas = [];
 			returnInputParams[inPName] = entityDatas;
-			var entity = getEntity(inS, inSType, ruleContext);
+			var dsInfo = getDatasourceInfo(inS, inSType, ruleContext.getMethodContext());
+			var entity = dsInfo.ds;
 			var dataFilterType = inP["dataFilterType"];
 			var paramFieldMapping = inP["paramFieldMapping"];
 			var mapping = getMapping(paramFieldMapping);
@@ -224,14 +225,10 @@ var handleReturnValues = function (ruleContext, ReturnValue, returnMappings) {
 		return sourceValue;
 	};
 
-	var insertOrUpdateRecords2Entity = function (entityName, entityType, records, mappings, operType, isClearDatas, ruleContext) {
+	var insertOrUpdateRecords2Entity = function (dsInfo, records, mappings, operType, isClearDatas, ruleContext) {
 
 		if (undefined == ruleContext || null == ruleContext)
 			throw new Error("规则上下文获取失败，请传入正确的ruleContext");
-
-		// 如果目标不是一个实体对象
-		if (!vds.ds.isDatasource(entityName, entityType, ruleContext))
-			throw new Error("[" + entityName + "]不是实体对象");
 
 		if (operType == 'updateRecord' && isClearDatas == true)
 			throw new Error("更新类型为：更新记录时，不能勾选清空数据，请检查配置");
@@ -239,7 +236,8 @@ var handleReturnValues = function (ruleContext, ReturnValue, returnMappings) {
 		if (operType == 'loadRecord' && isClearDatas == false)
 			throw new Error("更新类型为：加载数据时，一定要勾选清空数据，请检查配置");
 
-		var destEntity = getEntity(entityName, entityType, ruleContext);
+		var destEntity = dsInfo.ds;
+
 		// 清空目标实体中的数据
 		if (isClearDatas) {
 			destEntity.clear();
@@ -296,7 +294,7 @@ var handleReturnValues = function (ruleContext, ReturnValue, returnMappings) {
 				for (var j = 0; j < oldRecords.length; j++) {
 					if (undefined == oldRecords[j] || null == oldRecords[j])
 						continue;
-					for (proName in tmpObj) {
+					for (var proName in tmpObj) {
 						if (proName.toLocaleLowerCase() != "id")
 							oldRecords[j].set(proName, tmpObj[proName]);
 					}
@@ -316,7 +314,7 @@ var handleReturnValues = function (ruleContext, ReturnValue, returnMappings) {
 				// 如果获取不到目标实体的记录，则新增
 				if (oldRecord == null)
 					newRecord = destEntity.createRecord();
-				for (proName in tmpObj) {
+				for (var proName in tmpObj) {
 					if (oldRecord == null)
 						newRecord.set(proName, tmpObj[proName]);
 					else if (proName.toLocaleLowerCase() != "id")
@@ -343,10 +341,7 @@ var handleReturnValues = function (ruleContext, ReturnValue, returnMappings) {
 				for (var i = 0; i < insertRecords.length; i++) {
 					datas.push(insertRecords[i].toMap());
 				}
-				destEntity.load({
-					"datas": datas,
-					"isAppend": false
-				});
+				destEntity.loadRecords(datas, { "isAppend": false });
 			} else {
 				destEntity.insertRecords(insertRecords);
 			}
@@ -367,6 +362,7 @@ var handleReturnValues = function (ruleContext, ReturnValue, returnMappings) {
 		}
 		return value;
 	};
+
 	for (var i = 0; i < returnMappings.length; i++) {
 		var mappings = returnMappings[i];
 		var destName = mappings["dest"];
@@ -379,10 +375,10 @@ var handleReturnValues = function (ruleContext, ReturnValue, returnMappings) {
 		var operType = mappings["updateDestEntityMethod"];
 		var isCleanTarget = mappings["isCleanDestEntityData"];
 
-
-		if (vds.ds.isDatasource(destName, destType, ruleContext)) {
+		var dsInfo = getDatasourceInfo(destName, destType, ruleContext.getMethodContext());
+		if (dsInfo.isEntity) {
 			// 如果实体不存在 则不执行更新数据
-			insertOrUpdateRecords2Entity(destName, destType, sourceValue, mappings["destFieldMapping"], operType, isCleanTarget, ruleContext);
+			insertOrUpdateRecords2Entity(dsInfo, sourceValue, mappings["destFieldMapping"], operType, isCleanTarget, ruleContext);
 		} else {
 			setVarValue(destName, destType, sourceValue, ruleContext);
 		}
@@ -422,34 +418,58 @@ var setVarValue = function (destName, destType, sourceValue, ruleContext) {
 			break;
 	}
 }
-var getEntity = function (entityName, entityType, ruleContext) {
-	if (undefined == ruleContext || null == ruleContext)
-		throw new Error("规则上下文获取失败，请传入正确的ruleContext");
 
-	var entity;
-	if (entityType == "entity" || entityType == "window") {
-		entity = getDatasource(entityName);
-	} else if (entityType == "windowVariant" || entityType == "windowInput") {
-		entity = vds.window.getInput(entityName);
-	} else if (entityType == "windowOutput") {
-		entity = vds.window.getOutput(entityName);
-	} else if (entityType == "ruleSetInput") {
-		entity = ruleContext.getMethodContext().getInput(entityName);
-	} else if (entityType == "ruleSetOutput") {
-		entity = ruleContext.getMethodContext().getOutput(entityName);
-	} else if (entityType == "ruleSetVariant" || entityType == "ruleSetVar") {
-		entity = ruleContext.getMethodContext().getVariable(entityName);
+var getDatasourceInfo = function (entityName, entityType, methodContext) {
+	var info = {
+		isEntity: false,
+		ds: null,
 	}
-	if (undefined == entity || null == entity)
-		throw new Error("找不到类型为[" + entityType + "]的实体：" + entityName);
-	return entity;
-};
-
-var getDatasource = function (datasourceName) {
-	if (undefined == datasourceName || null == datasourceName)
-		return null;
-	var datasource = vds.ds.lookup(datasourceName);
-	return datasource;
-};
+	// 界面实体：开发系统中，有的规则用entity有的规则用window，此处做兼容
+	if (entityType == "entity" || entityType == "window") {
+		info.isEntity = true;
+		info.ds = vds.ds.lookup(entityName);
+	}
+	// 窗体输入变量：开发系统中，有的规则用windowVariant有的规则用windowInput，此处做兼容
+	else if (entityType == "windowVariant" || entityType == "windowInput") {
+		var input = vds.window.getInputType(entityName);
+		if (input == "entity") {
+			info.isEntity = true;
+			info.ds = vds.window.getInput(entityName);
+		}
+	}
+	// 窗体输出变量
+	else if (entityType == "windowOutput") {
+		var output = vds.window.getOutputType(entityName);
+		if (output == "entity") {
+			info.isEntity = true;
+			info.ds = vds.window.getOutput(entityName);
+		}
+	}
+	// 方法输入变量
+	else if (entityType == "ruleSetInput") {
+		var varType = methodContext.getInputType(entityName);
+		if (varType == "entity") {
+			info.isEntity = true;
+			info.ds = methodContext.getInput(entityName);
+		}
+	}
+	// 方法输出变量
+	else if (entityType == "ruleSetOutput") {
+		var varType = methodContext.getOutputType(entityName);
+		if (varType == "entity") {
+			info.isEntity = true;
+			info.ds = methodContext.getOutput(entityName);
+		}
+	}
+	// 方法变量：开发系统中，有的规则用ruleSetVariant有的规则用ruleSetVar，此处做兼容
+	else if (entityType == "ruleSetVariant" || entityType == "ruleSetVar") {
+		var varType = methodContext.getVariableType(entityName);
+		if (varType == "entity") {
+			info.isEntity = true;
+			info.ds = methodContext.getVariable(entityName);
+		}
+	}
+	return info;
+}
 
 export { main }

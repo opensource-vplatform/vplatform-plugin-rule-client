@@ -477,7 +477,7 @@ var handlePagingLogic = function (totalRecordSave, ruleContext, entityName, targ
     var isSaveTotalRecord = totalRecordSaveObj.isSaveTotalRecord;
     if (undefined != isSaveTotalRecord && null != isSaveTotalRecord && isSaveTotalRecord) {
         var dataSource = _getEntityDS(ruleContext, targetModelType, entityName);
-        var amount = dataSource.getAllRecord().toArray().length;
+        var amount = dataSource.getAllRecords().toArray().length;
         var target = totalRecordSaveObj.target;
         var targetType = totalRecordSaveObj.targetType;
         if (targetType == "methodVariant") {
