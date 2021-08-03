@@ -81,14 +81,24 @@ var main = function (ruleContext) {
 					reject(vds.exception.newSystemException("记录引用检查执行异常！" + result));
 				};
 				errorCallback = ruleContext.genAsynCallback(errorCallback);
-				var promise = vds.rpc.callCommand("CommonRule_RecordReferenceCheck",[{
+				// var promise = vds.rpc.callCommand("CommonRule_RecordReferenceCheck",[{
+				// 	"code": "InParams",
+				// 	"type": "char",
+				// 	"value": vds.string.toJson(params)
+				// }], {
+				// 	"isAsync": true,
+				// });
+				// promise.then(callback).catch(errorCallback);
+				vds.rpc.callCommandSync("CommonRule_RecordReferenceCheck",[{
 					"code": "InParams",
 					"type": "char",
 					"value": vds.string.toJson(params)
 				}], {
-					"isAsync": true,
+					"isAsync": false,
+					"success":callback,
+					"fail":errorCallback
 				});
-				promise.then(callback).catch(errorCallback);
+				// promise.then(callback).catch(errorCallback);
 			}
 		} catch (err) {
 			reject(err);
