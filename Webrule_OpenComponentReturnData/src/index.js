@@ -100,6 +100,9 @@ var main = function (ruleContext) {
 					});
 					break;
 				case "appointWindow": //指定窗体
+					if(!inParams.browerWindowFlag){
+						inParams.browerWindowFlag = "_blank";
+					}
 				case "currentWindowRedirection": //浏览器刷新
 					isFinish = true;
 					var winName = inParams.browerWindowFlag;
