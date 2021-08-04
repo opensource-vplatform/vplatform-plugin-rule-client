@@ -21,6 +21,7 @@ var main = function (ruleContext) {
 				if (ruleContext.setResult) {
 					ruleContext.setResult("isSuccess", false);
 				}
+				resolve();
 			}
 			var promise = vds.app.getCurrentPosition();
 			promise.then(success).catch(error);

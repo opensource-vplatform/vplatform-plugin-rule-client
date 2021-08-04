@@ -162,6 +162,7 @@ var main = function (ruleContext) {
                             "pageSize": pageSize,
                             "recordStart": recordStart,
                         },
+                        "autoFieldMapping": isFieldAutoMapping,
                         "treeStruct": treeStructMap,
                         "methodContext": ruleContext.getMethodContext(),
                         "isAsync": i < itemConfigs.length - 1 ? false : true,
@@ -477,7 +478,7 @@ var handlePagingLogic = function (totalRecordSave, ruleContext, entityName, targ
     var isSaveTotalRecord = totalRecordSaveObj.isSaveTotalRecord;
     if (undefined != isSaveTotalRecord && null != isSaveTotalRecord && isSaveTotalRecord) {
         var dataSource = _getEntityDS(ruleContext, targetModelType, entityName);
-        var amount = dataSource.getAllRecords().toArray().length;
+        var amount = dataSource.getDataAmount();
         var target = totalRecordSaveObj.target;
         var targetType = totalRecordSaveObj.targetType;
         if (targetType == "methodVariant") {

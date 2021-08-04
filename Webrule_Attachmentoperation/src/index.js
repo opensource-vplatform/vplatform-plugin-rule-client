@@ -489,6 +489,7 @@ function callYozodcs(params) {
 
 	if (vds.environment.isMobileWindow()) {
 		var successCB = function (data) {
+			resolve();
 		};
 		var errorCB = function (errorMsg) {
 			HandleException(errorMsg, reject);
@@ -514,6 +515,7 @@ function callYozodcs(params) {
 					});
 					break;
 			}
+			resolve();
 		}
 		var errorCB = function (errorMsg) {
 			HandleException(errorMsg, reject);
@@ -521,7 +523,6 @@ function callYozodcs(params) {
 		var promise = vds.attachment.convert(fileId);
 		promise.then(successCB).catch(errorCB);
 	}
-	resolve();
 }
 
 /**

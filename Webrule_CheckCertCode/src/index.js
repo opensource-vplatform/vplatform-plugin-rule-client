@@ -73,11 +73,11 @@ var main = function (ruleContext) {
 							promise.then(function (datas) {
 								if (datas && datas.success) {
 									success();
-									setBusinessRuleResult(ruleContext, outFlag);
+									setBusinessRuleResult(ruleContext, outFlag, resolve);
 								} else {
 									var result = vds.message.error("生成验证码失败" + (datas.msg ? ", 错误信息：" + datas.msg : ""));
 									result.then(function () {
-										setBusinessRuleResult(ruleContext, outFlag);
+										setBusinessRuleResult(ruleContext, outFlag, resolve);
 									}).catch(reject);
 								}
 							}).catch(reject);
