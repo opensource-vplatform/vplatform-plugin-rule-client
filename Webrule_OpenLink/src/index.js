@@ -136,12 +136,12 @@ var main = function (ruleContext) {
 					"height": height,
 					"closed": (function (context) { //关闭回调
 						return function () {
-							// context.fireRuleCallback();
-							resolve();
+							context.fireCallback && context.fireCallback();
 						}
 					})(ruleContext)
 				}
 				vds.browser.newTab(url, params);
+				resolve();
 			} else if (targetType == TARGET_TYPE_NEW_WINDOW) {
 				if (!vds.environment.isMobileWindow()) {
 					var widthExp = inParamObj.widthExp;
