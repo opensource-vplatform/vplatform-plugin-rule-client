@@ -31,4 +31,4 @@ var main = function (ruleContext) {
 	});
 }
 
-exports.main = main;
+export { main }
