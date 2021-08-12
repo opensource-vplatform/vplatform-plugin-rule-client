@@ -13,9 +13,16 @@ var isNotEmpty = function (str) {
 /**
  * 校验是否数字
  */
-var judgeNumExt = function (num) {
+var isNum = function(arg1) {
 	var re = /^(\+|-)?\d+(?:\.\d+)?$/;
-    return re.test(num)
+	return re.test(arg1);
+};
+
+/**
+ * 校验是否数字
+ */
+var judgeNumExt = function (num) {
+    return isNum(num);
 }
 
 /**
@@ -166,7 +173,7 @@ var limit = function (str, parameter) {
 	var min = params[0];
 	var max = params[1];
 	var byByte = params[2];
-	if (!vds.object.isNumber(min) || !vds.object.isNumber(max) || !vds.object.isNumber(byByte)) {
+	if (!isNum(min) || !isNum(max) || !isNum(byByte)) {
 		vds.log.error("输入字符长度限制,参数必须全部为数字");
 		return false;
 	} else {
@@ -198,7 +205,7 @@ var limit = function (str, parameter) {
  * 数值区间校验
  */
 var checkNum = function (num, parameter) {
-	if (!vds.object.isNumber(num)) {
+	if (!isNum(num)) {
 		vds.log.error("判断输入数值是否在(n, m)区间,校验内容[" + num + "]必须为数字");
 		return false;
 	}
@@ -209,7 +216,7 @@ var checkNum = function (num, parameter) {
 	}
 	var min = params[0];
 	var max = params[1];
-	if (!vds.object.isNumber(min) || !vds.object.isNumber(max)) {
+	if (!isNum(min) || !isNum(max)) {
 		vds.log.error("判断输入数值是否在(n, m)区间,参数必须全部为数字");
 		return false;
 	} else {
