@@ -201,6 +201,7 @@ var getDatasource = function (dsCode, type, methodContext) {
             datasource = vds.window.getInput(dsCode);
             break;
         case "ruleSetVariant": //方法变量
+        case "ruleSetVar": //方法变量
             datasource = methodContext.getVariable(dsCode);
             break;
         case "ruleSetOutput": //方法输出
