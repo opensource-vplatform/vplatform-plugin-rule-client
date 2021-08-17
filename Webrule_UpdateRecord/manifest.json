@@ -7,6 +7,7 @@
         "code": "UpdateRecord",
         "name": "保存实体到数据库",
         "desc": "",
+        "transactionType":"transaction",
         "entry": "com.toone.v3.platform.rule.client.UpdateRecord.main",
         "defineUrl": "./dist/index.js"
     }]

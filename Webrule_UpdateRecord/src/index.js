@@ -82,7 +82,8 @@ var main = function (ruleContext) {
 			}
 			if (configs.length > 0) {
 				var promise = vds.rpc.saveData(configs, ruleContext,{
-					"isAsync":true
+					"isAsync":true,
+					"ruleContext":ruleContext
 				});
 				promise.then(resolve).catch(reject);
 			}else{

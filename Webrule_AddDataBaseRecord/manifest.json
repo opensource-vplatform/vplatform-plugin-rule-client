@@ -5,6 +5,7 @@
     "plugins": [{
         "type": "rule",
         "code": "AddDataBaseRecord",
+        "transactionType":"transaction",
         "name": "新增数据库记录",
         "desc": "",
         "entry": "com.toone.v3.platform.rule.client.AddDataBaseRecord.main",
