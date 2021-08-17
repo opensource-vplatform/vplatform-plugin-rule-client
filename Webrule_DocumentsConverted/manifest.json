@@ -8,6 +8,7 @@
         "name": "将表（及从表）数据插入到其它表",
         "desc": "",
         "entry": "com.toone.v3.platform.rule.client.DocumentsConverted.main",
-        "defineUrl": "./dist/index.js"
+        "defineUrl": "./dist/index.js",
+        "transactionType":"transaction"
     }]
 }

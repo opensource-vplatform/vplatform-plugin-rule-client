@@ -8,6 +8,7 @@
         "name": "获取当前App版本号",
         "desc": "",
         "entry": "com.toone.v3.platform.rule.client.CheckAppVersion.main",
-        "defineUrl": "./dist/index.js"
+        "defineUrl": "./dist/index.js",
+        "transactionType":"transaction"
     }]
 }

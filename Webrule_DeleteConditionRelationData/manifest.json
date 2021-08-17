@@ -8,6 +8,7 @@
         "name": "删除数据库中的记录",
         "desc": "",
         "entry": "com.toone.v3.platform.rule.client.DeleteConditionRelationData.main",
-        "defineUrl": "./dist/index.js"
+        "defineUrl": "./dist/index.js",
+        "transactionType":"transaction"
     }]
 }
