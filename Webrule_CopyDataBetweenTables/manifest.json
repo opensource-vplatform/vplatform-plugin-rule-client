@@ -8,6 +8,7 @@
         "name": "表间数据复制",
         "desc": "",
         "entry": "com.toone.v3.platform.rule.client.CopyDataBetweenTables.main",
-        "defineUrl": "./dist/index.js"
+        "defineUrl": "./dist/index.js",
+        "transactionType":"transaction"
     }]
 }

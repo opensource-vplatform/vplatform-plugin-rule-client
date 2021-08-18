@@ -1,0 +1,13 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_GetCurrentPosition",
+    "version":"3.4.0",
+    "plugins": [{
+        "type": "rule",
+        "code": "GetCurrentPosition",
+        "name": "获取当前位置的经纬度",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.GetCurrentPosition.main",
+        "defineUrl": "./dist/index.js"
+    }]
+}

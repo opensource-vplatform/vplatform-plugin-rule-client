@@ -1,0 +1,14 @@
+{
+    "groupId": "com.toone.v3.platform",
+    "code": "Webrule_DeleteConditionRelationData",
+    "version":"3.5.0",
+    "plugins": [{
+        "type": "rule",
+        "code": "DeleteConditionRelationData",
+        "name": "删除数据库中的记录",
+        "desc": "",
+        "entry": "com.toone.v3.platform.rule.client.DeleteConditionRelationData.main",
+        "defineUrl": "./dist/index.js",
+        "transactionType":"transaction"
+    }]
+}
