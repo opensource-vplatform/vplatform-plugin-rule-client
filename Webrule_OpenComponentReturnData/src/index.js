@@ -69,6 +69,9 @@ var main = function (ruleContext) {
 					promise.then(function(windowInstanceCode){
 						setResult(ruleContext,"windowInstanceCode", windowInstanceCode);
 						setResult(ruleContext, "isConfirmSelectionOnClose", false);
+						if(typeof(ruleContext.fireCallback) == "function"){
+							ruleContext.fireCallback();
+						}
 						resolve();
 					}).catch(reject);
 					break;
@@ -88,6 +91,9 @@ var main = function (ruleContext) {
 					promise.then(function(windowInstanceCode){
 						setResult(ruleContext,"windowInstanceCode", windowInstanceCode);
 						setResult(ruleContext, "isConfirmSelectionOnClose", false);
+						if(typeof(ruleContext.fireCallback) == "function"){
+							ruleContext.fireCallback();
+						}
 						resolve();
 					}).catch(reject);
 					break;
@@ -122,6 +128,9 @@ var main = function (ruleContext) {
 					promise.then(function(isConfirmExit, output){
 						setResult(ruleContext, "isConfirmSelectionOnClose", isConfirmExit);
 						setResult(ruleContext, "windowInstanceCode", "");
+						if(typeof(ruleContext.fireCallback) == "function"){
+							ruleContext.fireCallback();
+						}
 						resolve();
 					}).catch(reject);
 					break;
@@ -492,13 +501,6 @@ var getParam = function (inParams, ruleContext, valName) {
 	}
 	return openParam
 }
-
-var browser;
-var scopeManager;
-exports.initModule = function (sBox) {
-	scopeManager = sBox.getService("vjs.framework.extension.platform.interface.scope.ScopeManager");
-	browser = sBox.getService("vjs.framework.extension.platform.services.browser.Browser");
-};
 
 /**
  * 获取打开窗体标题 
