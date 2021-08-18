@@ -241,7 +241,7 @@ var getPagingInfoByDataSource = function (entityName) {
         for (var i = 0; i < widgetCodes.length; i++) {
             var widgetCode = widgetCodes[i];
             var type = vds.widget.getType(widgetCode);
-            if (!types[type]) {
+            if (!types.indexOf(type)) {
                 continue;
             }
             pageInfo = vds.widget.execute(widgetCode, "getPageInfo", [widgetCode]);
