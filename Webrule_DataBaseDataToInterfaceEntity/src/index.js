@@ -240,11 +240,10 @@ var getPagingInfoByDataSource = function (entityName) {
             var widgetCode = widgetCodes[i];
             var type = vds.widget.getType(widgetCode);
             if (types.indexOf(type) != -1) {
-                continue;
-            }
-            pageInfo = vds.widget.execute(widgetCode, "getPageInfo", [widgetCode]);
-            if (pageInfo) {
-                return pageInfo;
+                pageInfo = vds.widget.execute(widgetCode, "getPageInfo", [widgetCode]);
+                if (pageInfo) {
+                    return pageInfo;
+                }
             }
         }
     }
