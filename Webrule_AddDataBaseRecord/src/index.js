@@ -89,6 +89,7 @@ var main = function (ruleContext) {
 						"value": vds.string.toJson(params)
 					}], {
 						"isAsyn": true,
+						"ruleContext":ruleContext,
 						"timeout": vds.rpc.Timeout.Short
 					});
 					promise.then(function () {

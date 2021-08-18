@@ -5,8 +5,10 @@
     "plugins": [{
         "type": "rule",
         "code": "ModifyDataBaseRecord",
+        "transactionType":"transaction",
         "name": "修改数据库中的记录",
         "desc": "",
+        "isAsync":true,
         "entry": "com.toone.v3.platform.rule.client.ModifyDataBaseRecord.main",
         "defineUrl": "./dist/index.js"
     }]

@@ -110,12 +110,12 @@ var main = function (ruleContext) {
 						"value": vds.string.toJson(params)
 					}];
 					var promise = vds.rpc.callCommand("CommonRule_ModifyDataBaseRecord", commitParams, {
-						"isAsync": true
+						"isAsync": true,
+						"ruleContext":ruleContext
 					});
 					promise.then(callback).catch(errorCallback);
 				}
 			}
-			resolve();
 		} catch (err) {
 			reject(err);
 		}
