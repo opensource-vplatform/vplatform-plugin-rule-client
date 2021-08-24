@@ -7,6 +7,7 @@
         "code": "InterfaceEntityRecordRecycling",
         "name": "界面实体记录循环处理",
         "desc": "",
+        "isAsync":false,
         "entry": "com.toone.v3.platform.rule.client.InterfaceEntityRecordRecycling.main",
         "defineUrl": "./dist/index.js"
     }]

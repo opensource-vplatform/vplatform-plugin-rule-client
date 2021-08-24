@@ -7,6 +7,7 @@
         "code": "SetControlPropertys",
         "name": "控件属性设置",
         "desc": "",
+        "isAsync":false,
         "entry": "com.toone.v3.platform.rule.client.SetControlPropertys.main",
         "defineUrl": "./dist/index.js"
     }]

@@ -7,6 +7,7 @@
         "code": "SetEntityVarControlValue",
         "name": "给界面实体/控件/变量赋值",
         "desc": "",
+        "isAsync":false,
         "entry": "com.toone.v3.platform.rule.client.SetEntityVarControlValue.main",
         "defineUrl": "./dist/index.js"
     }]
