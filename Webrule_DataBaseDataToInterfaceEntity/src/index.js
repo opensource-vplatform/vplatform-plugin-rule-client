@@ -11,164 +11,167 @@ var main = function (ruleContext) {
             var isAsyn = inParamsObj["isAsyn"];
             var itemConfigs = inParamsObj["itemsConfig"];
             var treeStruct = inParamsObj["treeStruct"];
-            var dtds = [];
             var nowDtd = null;
             for (var i = 0; i < itemConfigs.length; i++) {
                 var _itemConfig = itemConfigs[i];
                 var asyFun = function (itemConfig) {
-                    var dtd = $.Deferred();
-                    var isType = itemConfig["Istype"];
-                    // 查询：1，表：0
-                    var queryConds = itemConfig["dsWhere"];
-                    // 过滤条件
-                    var entityName = itemConfig["entityName"];
-                    // 目标DB
-                    var targetModelType = itemConfig["entityType"];
-                    // 目标实体类型
-                    var itemqueryparam = itemConfig["itemqueryparam"];
-                    // 源数据中的字段
-                    var items = itemConfig["items"];
-                    // 映射关系
-                    var sourceName = itemConfig["sourceName"];
-                    // 源数据Name
-                    var dynamicLoad = itemConfig['dataLoad'];
-                    //是否自动映射字段
-                    var isFieldAutoMapping = itemConfig.isFieldAutoMapping === true ? true : false;
-                    var __isWindowRule = _isWindowRule(targetModelType);
-                    if (__isWindowRule) {
-                        handleWindowRule(entityName);
-                    }
+                    var dtd = new Promise(function (_resolve, _reject) {
+                        var isType = itemConfig["Istype"];
+                        // 查询：1，表：0
+                        var queryConds = itemConfig["dsWhere"];
+                        // 过滤条件
+                        var entityName = itemConfig["entityName"];
+                        // 目标DB
+                        var targetModelType = itemConfig["entityType"];
+                        // 目标实体类型
+                        var itemqueryparam = itemConfig["itemqueryparam"];
+                        // 源数据中的字段
+                        var items = itemConfig["items"];
+                        // 映射关系
+                        var sourceName = itemConfig["sourceName"];
+                        // 源数据Name
+                        var dynamicLoad = itemConfig['dataLoad'];
+                        //是否自动映射字段
+                        var isFieldAutoMapping = itemConfig.isFieldAutoMapping === true ? true : false;
+                        var __isWindowRule = _isWindowRule(targetModelType);
+                        if (__isWindowRule) {
+                            handleWindowRule(entityName);
+                        }
 
-                    //动态加载
-                    var isCustomSqlFind = (isType + "") == "1";
-                    var mode = isCustomSqlFind ? vds.ds.WhereType.Query : vds.ds.WhereType.Table;
-                    var wrParam = {
-                        "type": mode,
-                        "methodContext": ruleContext.getMethodContext()
-                    };
-                    var whereRestrict = vds.ds.createWhere(wrParam);
-                    var whereRestrictNoDepthFilter = vds.ds.createWhere(wrParam);
-                    // 处理动态加载数据
-                    var dynamicLoadCallBackFunc = (function (d, flag) {
-                        return function () {
-                            //给方法变量赋值  (开发系统暂时没有分页配置逻辑，后期考虑)
-                            if (undefined != totalRecordSave && null != totalRecordSave && totalRecordSave.length > 0) {
-                                handlePagingLogic(totalRecordSave, ruleContext, entityName, targetModelType);
-                            }
-                            //设置为异步异步
-                            d.resolve();
+                        //动态加载
+                        var isCustomSqlFind = (isType + "") == "1";
+                        var mode = isCustomSqlFind ? vds.ds.WhereType.Query : vds.ds.WhereType.Table;
+                        var wrParam = {
+                            "type": mode,
+                            "methodContext": ruleContext.getMethodContext()
                         };
-                    })(dtd, isAsyn);
-                    var mappings = getMappings(items, ruleContext);
-                    var treeStructMap = handleTreeStruct(dynamicLoad, mappings, sourceName, entityName, treeStruct, isFieldAutoMapping, whereRestrict, ruleContext);
-                    // 根据过滤条件获取出源数据源数据
-                    if (undefined != queryConds && null != queryConds && queryConds.length > 0) {
-                        whereRestrict.addCondition(queryConds);
-                        whereRestrictNoDepthFilter.addCondition(queryConds);
-                    }
+                        var whereRestrict = vds.ds.createWhere(wrParam);
+                        var whereRestrictNoDepthFilter = vds.ds.createWhere(wrParam);
+                        // 处理动态加载数据
+                        var dynamicLoadCallBackFunc = (function (d, flag) {
+                            return function () {
+                                //给方法变量赋值  (开发系统暂时没有分页配置逻辑，后期考虑)
+                                if (undefined != totalRecordSave && null != totalRecordSave && totalRecordSave.length > 0) {
+                                    handlePagingLogic(totalRecordSave, ruleContext, entityName, targetModelType);
+                                }
+                                //设置为异步异步
+                                // d.resolve();
+                                _resolve();
+                            };
+                        })(isAsyn);
 
-                    var params = genCustomParams(itemqueryparam, ruleContext);
+                        var mappings = getMappings(items, ruleContext);
+                        var treeStructMap = handleTreeStruct(dynamicLoad, mappings, sourceName, entityName, treeStruct, isFieldAutoMapping, whereRestrict, ruleContext);
+                        // 根据过滤条件获取出源数据源数据
+                        if (undefined != queryConds && null != queryConds && queryConds.length > 0) {
+                            whereRestrict.addCondition(queryConds);
+                            whereRestrictNoDepthFilter.addCondition(queryConds);
+                        }
 
-                    whereRestrict.addParameters(params);
-                    whereRestrictNoDepthFilter.addParameters(params);
+                        var params = genCustomParams(itemqueryparam, ruleContext);
 
-                    var pagers = itemConfig["pager"];
-                    var isPaging;
-                    var pageSize = -1;
-                    var recordStart = -1;
-                    var totalRecordSave;
+                        whereRestrict.addParameters(params);
+                        whereRestrictNoDepthFilter.addParameters(params);
 
-                    //加载规则分页
-                    if (undefined != pagers && null != pagers && pagers.length > 0) {
-                        var pager = pagers[0];
-                        var pageNo = -1;
-                        var size = -1;
-                        totalRecordSave = pager.totalRecordSave;
-                        isPaging = pager.isPaging;
-                        if (undefined != isPaging && null != isPaging && isPaging) {
-                            var pageNoTemp = vds.expression.execute(pager.pageNo, { "ruleContext": ruleContext });
-                            var pageSizeTemp = vds.expression.execute(pager.pageSize, { "ruleContext": ruleContext });
+                        var pagers = itemConfig["pager"];
+                        var isPaging;
+                        var pageSize = -1;
+                        var recordStart = -1;
+                        var totalRecordSave;
 
-                            if (pageNoTemp != null && pageNoTemp != "" && !isNaN(pageNoTemp)) {
-                                pageNo = parseInt(pageNoTemp);
-                            }
+                        //加载规则分页
+                        if (undefined != pagers && null != pagers && pagers.length > 0) {
+                            var pager = pagers[0];
+                            var pageNo = -1;
+                            var size = -1;
+                            totalRecordSave = pager.totalRecordSave;
+                            isPaging = pager.isPaging;
+                            if (undefined != isPaging && null != isPaging && isPaging) {
+                                var pageNoTemp = vds.expression.execute(pager.pageNo, { "ruleContext": ruleContext });
+                                var pageSizeTemp = vds.expression.execute(pager.pageSize, { "ruleContext": ruleContext });
 
-                            if (pageSizeTemp != null && pageSizeTemp != "" && !isNaN(pageSizeTemp)) {
-                                size = parseInt(pageSizeTemp);
-                            }
+                                if (pageNoTemp != null && pageNoTemp != "" && !isNaN(pageNoTemp)) {
+                                    pageNo = parseInt(pageNoTemp);
+                                }
 
-                            if (pageNo != -1 && size != -1) {
-                                pageSize = size
-                                recordStart = (pageNo - 1) * size + 1;
+                                if (pageSizeTemp != null && pageSizeTemp != "" && !isNaN(pageSizeTemp)) {
+                                    size = parseInt(pageSizeTemp);
+                                }
+
+                                if (pageNo != -1 && size != -1) {
+                                    pageSize = size
+                                    recordStart = (pageNo - 1) * size + 1;
+                                }
                             }
                         }
-                    }
-                    //分页控件分页
-                    if (__isWindowRule && (undefined == isPaging || null == isPaging || !isPaging)) {
-                        var paginationObj = getPagingInfoByDataSource(entityName);
-                        recordStart = paginationObj.recordStart;
-                        pageSize = paginationObj.pageSize;
-                    }
+                        //分页控件分页
+                        if (__isWindowRule && (undefined == isPaging || null == isPaging || !isPaging)) {
+                            var paginationObj = getPagingInfoByDataSource(entityName);
+                            recordStart = paginationObj.recordStart;
+                            pageSize = paginationObj.pageSize;
+                        }
 
-                    var queryParams = {};
-                    var queryType = "Table";
-                    if (isType == "Query") { //自定义查询
-                        queryType = "Query";
-                        queryParams = genCustomSqlQueryParams(whereRestrict.toParameters());
-                    } else {
-                        queryParams = whereRestrict.toParameters();
-                    }
+                        var queryParams = {};
+                        var queryType = "Table";
+                        if (isType == "Query") { //自定义查询
+                            queryType = "Query";
+                            queryParams = genCustomSqlQueryParams(whereRestrict.toParameters());
+                        } else {
+                            queryParams = whereRestrict.toParameters();
+                        }
 
-                    var widgetOrderInfo = getWidgetOrderInfo(ruleContext, targetModelType, entityName, itemConfig, isFieldAutoMapping);
+                        var widgetOrderInfo = getWidgetOrderInfo(ruleContext, targetModelType, entityName, itemConfig, isFieldAutoMapping);
 
-                    var orderByCfg = itemConfig["orderBy"] || [];
-                    if (isType == "Query") {
-                        orderByCfg = [];
-                    }
-                    // 排序条件处理
-                    orderByCfg = getAllOrderInfo(orderByCfg, widgetOrderInfo);
-                    if (orderByCfg && typeof orderByCfg != 'undefined' && orderByCfg.length > 0) {
-                        for (var obIndex = 0; obIndex < orderByCfg.length; obIndex++) {
-                            var orderByItem = orderByCfg[obIndex];
-                            if (!orderByItem.field || orderByItem.field == "") {
-                                continue;
+                        var orderByCfg = itemConfig["orderBy"] || [];
+                        if (isType == "Query") {
+                            orderByCfg = [];
+                        }
+                        // 排序条件处理
+                        orderByCfg = getAllOrderInfo(orderByCfg, widgetOrderInfo);
+                        if (orderByCfg && typeof orderByCfg != 'undefined' && orderByCfg.length > 0) {
+                            for (var obIndex = 0; obIndex < orderByCfg.length; obIndex++) {
+                                var orderByItem = orderByCfg[obIndex];
+                                if (!orderByItem.field || orderByItem.field == "") {
+                                    continue;
+                                }
+                                var fieldArray = orderByItem.field.split(".");
+                                var orderByField = fieldArray[fieldArray.length - 1];
+                                var orderType = orderByItem.type.toLowerCase() == 'desc' ? whereRestrict.OrderType.DESC : whereRestrict.OrderType.ASC;
+                                whereRestrict.addOrderBy(orderByField, orderType);
+                                whereRestrictNoDepthFilter.addOrderBy(orderByField, orderType);
                             }
-                            var fieldArray = orderByItem.field.split(".");
-                            var orderByField = fieldArray[fieldArray.length - 1];
-                            var orderType = orderByItem.type.toLowerCase() == 'desc' ? whereRestrict.OrderType.DESC : whereRestrict.OrderType.ASC;
-                            whereRestrict.addOrderBy(orderByField, orderType);
-                            whereRestrictNoDepthFilter.addOrderBy(orderByField, orderType);
                         }
-                    }
 
-                    var newFieldMappings = [];
-                    for (var j = 0, _l = mappings.length; j < _l; j++) {
-                        var _map = mappings[j];
-                        var field = _map["destName"];
-                        if (field.indexOf(".") != -1) {
-                            field = field.split(".")[1];
+                        var newFieldMappings = [];
+                        for (var j = 0, _l = mappings.length; j < _l; j++) {
+                            var _map = mappings[j];
+                            var field = _map["destName"];
+                            if (field.indexOf(".") != -1) {
+                                field = field.split(".")[1];
+                            }
+                            newFieldMappings.push({
+                                "code": field,
+                                "type": _map["type"] == "entityField" ? "field" : "expression",
+                                "value": _map["sourceName"]
+                            })
                         }
-                        newFieldMappings.push({
-                            "code": field,
-                            "type": _map["type"] == "entityField" ? "field" : "expression",
-                            "value": _map["sourceName"]
-                        })
-                    }
 
-                    var destEntity = getDatasource(entityName, targetModelType, ruleContext.getMethodContext());
-                    var promise = vds.rpc.queryData(sourceName, queryType, destEntity, newFieldMappings, {
-                        "where": whereRestrict,
-                        "pageConfig": {
-                            "pageSize": pageSize,
-                            "recordStart": recordStart,
-                        },
-                        "autoFieldMapping": isFieldAutoMapping,
-                        "treeStruct": treeStructMap,
-                        "methodContext": ruleContext.getMethodContext(),
-                        "isAsync": i < itemConfigs.length - 1 ? false : true,
-                        "isAppend": false
+                        var destEntity = getDatasource(entityName, targetModelType, ruleContext.getMethodContext());
+                        var promise = vds.rpc.queryData(sourceName, queryType, destEntity, newFieldMappings, {
+                            "where": whereRestrict,
+                            "pageConfig": {
+                                "pageSize": pageSize,
+                                "recordStart": recordStart,
+                            },
+                            "autoFieldMapping": isFieldAutoMapping,
+                            "treeStruct": treeStructMap,
+                            "methodContext": ruleContext.getMethodContext(),
+                            "isAsync": i < itemConfigs.length - 1 ? false : true,
+                            "isAppend": false
+                        });
+                        promise.then(dynamicLoadCallBackFunc).catch(reject);
                     });
-                    promise.then(dynamicLoadCallBackFunc).catch(reject);
+
                     return dtd;
                 }
                 if (i == 0) {
