@@ -66,7 +66,7 @@ var main = function (ruleContext) {
 
 			var errorCallback = function (responseObj) {
 				vds.log.error(responseObj.message);
-				reject(responseObj.message);
+				reject(responseObj);
 			};
 
 			var sConfig = {
