@@ -3,7 +3,6 @@
  */
 
 vds.import("vds.component.*", "vds.ds.*", "vds.exception.*", "vds.expression.*", "vds.log.*", "vds.rpc.*", "vds.string.*", "vds.widget.*", "vds.window.*");
-
 var main = function (ruleContext) {
     return new Promise(function (resolve, reject) {
         try {
@@ -11,11 +10,10 @@ var main = function (ruleContext) {
             var isAsyn = inParamsObj["isAsyn"];
             var itemConfigs = inParamsObj["itemsConfig"];
             var treeStruct = inParamsObj["treeStruct"];
-            var nowDtd = null;
-            for (var i = 0; i < itemConfigs.length; i++) {
-                var _itemConfig = itemConfigs[i];
-                var asyFun = function (itemConfig) {
-                    var dtd = new Promise(function (_resolve, _reject) {
+
+            var asyFun = function (itemConfig) {
+                return new Promise((function (itemConfig) {
+                    return function (_resolve, _reject) {
                         var isType = itemConfig["Istype"];
                         // 查询：1，表：0
                         var queryConds = itemConfig["dsWhere"];
@@ -48,17 +46,16 @@ var main = function (ruleContext) {
                         var whereRestrict = vds.ds.createWhere(wrParam);
                         var whereRestrictNoDepthFilter = vds.ds.createWhere(wrParam);
                         // 处理动态加载数据
-                        var dynamicLoadCallBackFunc = (function (d, flag) {
+                        var dynamicLoadCallBackFunc = (function (_resolve) {
                             return function () {
                                 //给方法变量赋值  (开发系统暂时没有分页配置逻辑，后期考虑)
                                 if (undefined != totalRecordSave && null != totalRecordSave && totalRecordSave.length > 0) {
                                     handlePagingLogic(totalRecordSave, ruleContext, entityName, targetModelType);
                                 }
                                 //设置为异步异步
-                                // d.resolve();
                                 _resolve();
                             };
-                        })(isAsyn);
+                        })(_resolve);
 
                         var mappings = getMappings(items, ruleContext);
                         var treeStructMap = handleTreeStruct(dynamicLoad, mappings, sourceName, entityName, treeStruct, isFieldAutoMapping, whereRestrict, ruleContext);
@@ -169,35 +166,31 @@ var main = function (ruleContext) {
                             "isAsync": i < itemConfigs.length - 1 ? false : true,
                             "isAppend": false
                         });
-                        promise.then(dynamicLoadCallBackFunc).catch(reject);
-                    });
-
-                    return dtd;
-                }
-                if (i == 0) {
-                    nowDtd = asyFun(_itemConfig);
-                } else {
-                    nowDtd = nowDtd.then(function (config) {
-                        return function () {
-                            return asyFun(config);
-                        }
-                    }(_itemConfig));
-                }
-            }
-            if (isAsyn) { //串行执行加载规则
-                setTimeout((function (_resolve) {
-                    return function () {
-                        _resolve();
-                    };
-                })(resolve), 1);
-            }
-            nowDtd.then((function (flag, _resolve) {
-                return function () {
-                    if (!flag) {
-                        _resolve();
+                        promise.then(dynamicLoadCallBackFunc).catch(_reject);
                     }
+                })(itemConfig));
+            }
+
+            var exeAsyFun = function (itemConfigs, resolve, reject, endFun) {
+                if (itemConfigs.length == 0) {
+                    endFun();
+                    return;
                 }
-            })(isAsyn, resolve));
+                var itemConfig = itemConfigs.splice(0, 1);
+                itemConfig = itemConfig[0];
+                var promise = asyFun(itemConfig);
+                promise.then((function (_itemConfigs, _resolve, _reject, _endFun) {
+                    return function () {
+                        exeAsyFun(_itemConfigs, _resolve, _reject, _endFun)
+                    }
+                })(itemConfigs, resolve, reject, endFun)).catch(reject);
+            }
+
+            exeAsyFun(itemConfigs, resolve, reject, (function (_resolve) {
+                return function () {
+                    _resolve();
+                }
+            })(resolve));
         } catch (ex) {
             reject(ex);
         }
