@@ -19,7 +19,7 @@ var main = function (ruleContext) {
             var dtds = [];
             var nowDtd = null;
             var asyFun = function (config, isLast) {
-                return new Promise((function (_config, _isLast) {
+                return new Promise((function (itemConfig, _isLast) {
                     return function (_resolve, _reject) {
                         var isType = itemConfig["Istype"];
                         // 查询：1，表：0
@@ -197,20 +197,20 @@ var main = function (ruleContext) {
                     }
                 })(config, isLast));
             }
-            var exeConfig = function(configs, endFun){
+            var exeConfig = function(configs, reject, endFun){
                 if(configs.length == 0){
                     endFun();
                     return;
                 }
                 var config = configs.splice(0, 1);
-                var promise = asyFun(config, configs.length == 0);
-                promise.then((function(_configs, _endFun){
+                var promise = asyFun(config[0], configs.length == 0);
+                promise.then((function(_configs, _reject, _endFun){
                     return function(){
-                        exeConfig(_configs, _endFun)
+                        exeConfig(_configs, _reject, _endFun)
                     }
-                })(configs, endFun));
+                })(configs, reject, endFun)).catch(reject);
             }
-            exeConfig(configs, (function(_resolve, _isAsyn){
+            exeConfig(itemConfigs, reject, (function(_resolve, _isAsyn){
                 return function(){
                     if(!_isAsyn){
                         _resolve();

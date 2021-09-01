@@ -6,6 +6,7 @@
         "type": "rule",
         "code": "AddTableRecord",
         "name": "新增实体记录",
+        "isAsync":false,
         "desc": "对指定实体进行新增行操作。 \n方法名：AddTableRecord",
         "entry": "com.yindangu.vplatform.rule.client.addtablerecord.main",
         "defineUrl": "./dist/index.js"

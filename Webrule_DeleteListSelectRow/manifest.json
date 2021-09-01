@@ -7,6 +7,7 @@
         "code": "DeleteListSelectRow",
         "name": "删除实体记录",
         "desc": "",
+        "isAsync":false,
         "entry": "com.toone.v3.platform.rule.client.DeleteListSelectRow.main",
         "defineUrl": "./dist/index.js"
     }]
