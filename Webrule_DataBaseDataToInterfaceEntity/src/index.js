@@ -11,8 +11,8 @@ var main = function (ruleContext) {
             var itemConfigs = inParamsObj["itemsConfig"];
             var treeStruct = inParamsObj["treeStruct"];
 
-            var asyFun = function (itemConfig) {
-                return new Promise((function (itemConfig) {
+            var asyFun = function (itemConfig, isLast) {
+                return new Promise((function (itemConfig, isLast) {
                     return function (_resolve, _reject) {
                         var isType = itemConfig["Istype"];
                         // 查询：1，表：0
@@ -163,34 +163,45 @@ var main = function (ruleContext) {
                             "autoFieldMapping": isFieldAutoMapping,
                             "treeStruct": treeStructMap,
                             "methodContext": ruleContext.getMethodContext(),
-                            "isAsync": i < itemConfigs.length - 1 ? false : true,
+                            "isAsync": isLast ? false : true,
                             "isAppend": false
                         });
                         promise.then(dynamicLoadCallBackFunc).catch(_reject);
                     }
-                })(itemConfig));
+                })(itemConfig, isLast));
             }
 
-            var exeAsyFun = function (itemConfigs, resolve, reject, endFun) {
+            var exeAsyFun = function (itemConfigs, reject, endFun) {
                 if (itemConfigs.length == 0) {
                     endFun();
                     return;
                 }
                 var itemConfig = itemConfigs.splice(0, 1);
-                itemConfig = itemConfig[0];
-                var promise = asyFun(itemConfig);
-                promise.then((function (_itemConfigs, _resolve, _reject, _endFun) {
+                var isLast = itemConfigs.length == 0;
+                var promise = asyFun(itemConfig[0], isLast);
+                promise.then((function (_itemConfigs, _reject, _endFun) {
                     return function () {
-                        exeAsyFun(_itemConfigs, _resolve, _reject, _endFun)
+                        exeAsyFun(_itemConfigs, _reject, _endFun)
                     }
-                })(itemConfigs, resolve, reject, endFun)).catch(reject);
+                })(itemConfigs, reject, endFun)).catch(reject);
             }
 
-            exeAsyFun(itemConfigs, resolve, reject, (function (_resolve) {
+            exeAsyFun(itemConfigs, reject, (function (_resolve, _isAsyn) {
                 return function () {
-                    _resolve();
+                    if (!_isAsyn) {
+                        _resolve();
+                    }
                 }
             })(resolve));
+
+            if (isAsyn) {//并行执行加载规则
+                setTimeout((function (_resolve) {
+                    return function () {
+                        _resolve();
+                    };
+                })(resolve), 1);
+            }
+
         } catch (ex) {
             reject(ex);
         }
