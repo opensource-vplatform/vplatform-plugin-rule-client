@@ -39,6 +39,9 @@ var main = function (ruleContext) {
 					if (null != dataSourceName) {
 						/*给实体添加前缀*/
 						var datasource = getDatasouce(dataSourceName, dataSourceNameType, ruleContext);
+						if(null == datasource){
+							throw vds.exception.newConfigException("实体【"+dataSourceName+"】不存在，请检查配置.");
+						}
 						var newFieldMappings = [];
 						var fileMappings = dataSourceMapping["dataMap"];
 						if(fileMappings instanceof Array){
