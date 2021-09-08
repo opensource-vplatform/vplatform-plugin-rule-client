@@ -108,7 +108,10 @@ var invokeV3Webapi = function (webAPISite, returnInputParams, timeOut, returnMap
 
 	var error = ruleContext.genAsynCallback(
 		function (param) {
-			var exception = vds.exception.newSystemException(param.msg);
+			var exception = param;
+			if(!vds.exception.isException(param)){/* 非异常对象，才需要创建异常 */
+				exception = vds.exception.newSystemException(param.msg);
+			}
 			reject(exception);
 		}
 	);
