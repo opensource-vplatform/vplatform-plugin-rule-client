@@ -69,24 +69,29 @@ var main = function (ruleContext) {
 								}
 							}
 
-							var promise = vds.rpc.callCommand("FileCertImage", [], { "isAsync": false, "CertPicCode": iden });
-							promise.then(function (datas) {
-								if (datas && datas.success) {
-									success();
-									setBusinessRuleResult(ruleContext, outFlag, resolve);
-								} else {
-									var result = vds.message.error("生成验证码失败" + (datas.msg ? ", 错误信息：" + datas.msg : ""));
-									result.then(function () {
+							vds.rpc.callCommandSync("FileCertImage", [], {
+								"isAsync": false,
+								"CertPicCode": iden,
+								"success": function (datas) {
+									if (datas && datas.success) {
+										success();
 										setBusinessRuleResult(ruleContext, outFlag, resolve);
-									}).catch(reject);
-								}
-							}).catch(reject);
+									} else {
+										var result = vds.message.error("生成验证码失败" + (datas.msg ? ", 错误信息：" + datas.msg : ""));
+										result.then(function () {
+											setBusinessRuleResult(ruleContext, outFlag, resolve);
+										}).catch(reject);
+									}
+								},
+								"fail": reject
+							});
 						} else {
 							var moduleId = vds.window.getCode();
 							//xx参数防止图片组件接受相同地址时不刷新问题
 							var url = vds.environment.getContextPath() + 'module-operation!executeOperation?moduleId=' + moduleId + '&operation=FileCertImage&xx=' + iden;
 							vds.widget.execute(widgetId, 'setImageUrl', [url]);
-							resolve();
+							//设置返回值
+							setBusinessRuleResult(ruleContext, outFlag, resolve);
 						}
 					}
 					else {
