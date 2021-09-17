@@ -120,9 +120,9 @@ var main = function (ruleContext) {
                         var widgetOrderInfo = getWidgetOrderInfo(ruleContext, targetModelType, entityName, itemConfig, isFieldAutoMapping);
 
                         var orderByCfg = itemConfig["orderBy"] || [];
-                        if (isType == "Query") {
+                        /*if (isType == "Query") {//查询增加排序功能支持，Task20210608016
                             orderByCfg = [];
-                        }
+                        }*/
                         // 排序条件处理
                         orderByCfg = getAllOrderInfo(orderByCfg, widgetOrderInfo);
                         if (orderByCfg && typeof orderByCfg != 'undefined' && orderByCfg.length > 0) {
