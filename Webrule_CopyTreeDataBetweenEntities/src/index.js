@@ -22,6 +22,8 @@ var main = function (ruleContext) {
             var treeStruct = inParams.treeStruct;
             //是否插入到当前节点下面
             var isCurrNode = inParams.isCurrNode;
+            //是否重置当前行
+            var resetCurrent = inParams.resetCurrent;
             //#endregion
 
             //#region 获取目标实体及目标树信息
@@ -90,10 +92,11 @@ var main = function (ruleContext) {
                 if (isCurrNode) {
                     parentNode = [destCurrentNode];
                 }
-                insertTree(destTree, parentNode, roots, idChildren, mappingItems, ruleContext);
+                insertTree(destTree, parentNode, roots, idChildren, mappingItems, ruleContext, resetCurrent);
                 //#endregion
             } else {
                 //#region 目标树插入节点
+                
                 for (var i = 0; i < srcRecords.length; i++) {
                     var srcRecord = srcRecords[i];
                     var defaultValue = _getDefaultValue(srcRecord, mappingItems, ruleContext);
@@ -104,9 +107,9 @@ var main = function (ruleContext) {
                         node.set(tmpTreeValue.fieldName, tmpTreeValue.value, null);
                     }
                     if (isCurrNode) {
-                        destCurrentNode.addChilds([node]);
+                        destCurrentNode.addChilds([node],resetCurrent);
                     } else {
-                        destTree.addRootNodes([node]);
+                        destTree.addRootNodes([node],resetCurrent);
                     }
                 }
                 //#endregion
@@ -121,16 +124,16 @@ var main = function (ruleContext) {
 /**
  * 插入一颗树或树枝， 也可能树枝是不连续的
  */
-var insertTree = function (tree, parentNode, roots, idChildren, mappingItems, ruleContext) {
+var insertTree = function (tree, parentNode, roots, idChildren, mappingItems, ruleContext, resetCurrent) {
     for (var i = 0; i < roots.length; i++) {
         var root = roots[i];
-        insertSubTree(parentNode, root, ruleContext);
+        insertSubTree(parentNode, root, ruleContext, resetCurrent);
     }
 
     /**
      * 插入一颗子树
      */
-    function insertSubTree(parentNode, srcRecord, ruleContext) {
+    function insertSubTree(parentNode, srcRecord, ruleContext, resetCurrent) {
         var children = idChildren[srcRecord.getSysId()];
         var insertRecord;
         var defaultValue = _getDefaultValue(srcRecord, mappingItems, ruleContext);
@@ -144,11 +147,11 @@ var insertTree = function (tree, parentNode, roots, idChildren, mappingItems, ru
             parentNode[0].addChilds([node]);
             insertRecord = [node];
         } else {
-            insertRecord = tree.addRootNodes([node]);
+            insertRecord = tree.addRootNodes([node],resetCurrent);
         }
         if (children) {
             for (var i = 0; i < children.length; i++) {
-                insertSubTree(insertRecord, children[i], ruleContext);
+                insertSubTree(insertRecord, children[i], ruleContext, resetCurrent);
             }
         }
     };

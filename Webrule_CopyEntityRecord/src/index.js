@@ -74,17 +74,21 @@ var main = function (ruleContext) {
 			var mappingRecords = _mappingRecords(sourceRecords, fieldMapping, ruleContext);
 
 			var changedRecords = null;
+
+			//是否重新设置当前行
+			var resetCurrent = getResetCurrent(inParams);
+
 			// 如果操作类型为追加，则不需要进行重复判定，简单insert即可。
 			if (operatorType == OPERATOR_TYPE.APPEND) {
-				changedRecords = _appendToDest(destName, mappingRecords, fieldMapping);
+				changedRecords = _appendToDest(destName, mappingRecords, fieldMapping, resetCurrent);
 			}
 			// 否则其他的操作类型，都需要检查重复判定，根据重复结果进行不同操作
 			else {
-				changedRecords = _copyToDest(destName, mappingRecords, fieldMapping, operatorType, checkItems, mergeItems);
+				changedRecords = _copyToDest(destName, mappingRecords, fieldMapping, operatorType, checkItems, mergeItems, resetCurrent);
 			}
 
 			// 如果复制到目标实体记录不为空，默认选中第一条
-			if (changedRecords != null && changedRecords.length > 0) {
+			if (changedRecords != null && changedRecords.length > 0 && resetCurrent) {
 				var datasource = vds.ds.lookup(destName);
 				datasource.setCurrentRecord(changedRecords[0]);
 			}
@@ -265,7 +269,7 @@ var _setRecordValue = function (record, mappingRecord, fieldMapping) {
 /**
  * 用于重复记录操作方式为：追加
  */
-var _appendToDest = function (destName, mappingRecords, fieldMapping) {
+var _appendToDest = function (destName, mappingRecords, fieldMapping, resetCurrent) {
 	if (!vds.ds.exists(destName)) {
 		throw new Error("目标实体不存在！destName=" + destName);
 	}
@@ -289,7 +293,7 @@ var _appendToDest = function (destName, mappingRecords, fieldMapping) {
 	}
 
 	if (insertRecords.length > 0) {
-		datasource.insertRecords(insertRecords);
+		datasource.insertRecords(insertRecords,null,resetCurrent);
 	}
 
 	return insertRecords;
@@ -310,8 +314,10 @@ var _appendToDest = function (destName, mappingRecords, fieldMapping) {
  *            用什么来判定重复
  * @param mergeItems
  *            需要合并值的字段
+ * @param resetCurrent
+ * 			  是否重置当前行
  */
-var _copyToDest = function (destName, mappingRecords, fieldMapping, operatorType, checkItems, mergeItems) {
+var _copyToDest = function (destName, mappingRecords, fieldMapping, operatorType, checkItems, mergeItems, resetCurrent) {
 	if (!vds.ds.exists(destName)) {
 		throw new Error("目标实体不存在！destName=" + destName);
 	}
@@ -373,7 +379,7 @@ var _copyToDest = function (destName, mappingRecords, fieldMapping, operatorType
 	}
 
 	if (insertRecords.length > 0) {
-		datasource.insertRecords(insertRecords);
+		datasource.insertRecords(insertRecords,null,resetCurrent);
 	}
 	if (updateRecords.length > 0) {
 		datasource.updateRecords(updateRecords)
@@ -569,6 +575,15 @@ var copyEntity = function (params, ruleContext) {
 }
 
 /**
+ * 获取是否重置当前行配置信息
+ * @param {Object} params 
+ * @returns 
+ */
+var getResetCurrent = function(params){
+	return typeof(params.resetCurrent)=='boolean' ? params.resetCurrent:true;
+}
+
+/**
  * 复制实体（变量实体及界面实体）记录(jsonVersion>=1.0)
  * @param	params			赋值映射信息
  * {
@@ -615,12 +630,14 @@ var copyByEntity = function (params, ruleContext) {
     var sourceMappingRecords = _mappingRecords(sourceRecords, fieldMapping, ruleContext);
     // 操作类型：追加、忽略、替换、合并
     var operType = params.operationType;
+	//是否重置当前行
+	var resetCurrent = getResetCurrent(params);
     if (operType == OPERATOR_TYPE.APPEND) {
-        _append2Dest(destDatasource, sourceMappingRecords, fieldMapping);
+        _append2Dest(destDatasource, sourceMappingRecords, fieldMapping, resetCurrent);
     } else {
         var checkItems = params.checkItems;
         var mergeItems = params.mergeItems;
-        _copy2Dest(destDatasource, sourceMappingRecords, fieldMapping, operType, checkItems, mergeItems, isAddRecord, destRecords);
+        _copy2Dest(destDatasource, sourceMappingRecords, fieldMapping, operType, checkItems, mergeItems, isAddRecord, destRecords, resetCurrent);
     }
 }
 
@@ -823,7 +840,7 @@ var _filterRecords = function (records, condition, ruleContext) {
 }
 
 // 追加：直接把记录insert到目标数据源中
-var _append2Dest = function (destDatasource, sourceMappingRecords, fieldMapping) {
+var _append2Dest = function (destDatasource, sourceMappingRecords, fieldMapping, resetCurrent) {
     var insertRecords = [];
     if (sourceMappingRecords.length > 0) {
         for (var i = 0, mappingRecord; mappingRecord = sourceMappingRecords[i]; i++) {
@@ -834,14 +851,14 @@ var _append2Dest = function (destDatasource, sourceMappingRecords, fieldMapping)
         }
     }
     if (insertRecords.length > 0) {
-        destDatasource.insertRecords(insertRecords);
+        destDatasource.insertRecords(insertRecords,null,resetCurrent);
     }
     return insertRecords;
 }
 
 // 忽略、替换、合并：重复判断、合并处理
 var _copy2Dest = function (destDatasource, sourceMappingRecords, fieldMapping,
-    operatorType, checkItems, mergeItems, isAddRecord, destRecords) {
+    operatorType, checkItems, mergeItems, isAddRecord, destRecords, resetCurrent) {
     // 为避免多次触发事件，在操作完成后一次性将变动的记录插入、或者修改到目标实体
     var insertRecords = [];
     var updateRecords = [];
@@ -907,7 +924,7 @@ var _copy2Dest = function (destDatasource, sourceMappingRecords, fieldMapping,
     }
 
     if (insertRecords.length > 0) {
-        destDatasource.insertRecords(insertRecords);
+        destDatasource.insertRecords(insertRecords,null,resetCurrent);
     }
     if (updateRecords.length > 0) {
         destDatasource.updateRecords(updateRecords);
