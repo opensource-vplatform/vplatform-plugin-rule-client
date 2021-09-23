@@ -7,6 +7,7 @@ var main = function (ruleContext) {
     return new Promise(function (resolve, reject) {
         try {
             var inParamsObj = ruleContext.getVplatformInput();
+            filterConfig(inParamsObj);
             var isAsyn = inParamsObj["isAsyn"];
             var itemConfigs = inParamsObj["itemsConfig"];
             var treeStruct = inParamsObj["treeStruct"];
@@ -207,6 +208,39 @@ var main = function (ruleContext) {
         }
     });
 };
+
+/**
+ * 过滤规则配置
+ * 场景1：配置实体时，添加了排序字段配置，然后切换到查询时，排序字段配置未清空，导致报错
+ * @param {Object} config 规则配置信息
+ */
+var filterConfig = function(config){
+    var itemsConfig = config.itemsConfig;
+    if(itemsConfig&&itemsConfig.length>0){
+        for(var i=0,l=itemsConfig.length;i<l;i++){
+            var itemConfig = itemsConfig[i];
+            var orderBy = itemConfig.orderBy;
+            if(orderBy&&orderBy.length>0){
+                var shouldDestroy = false;
+                var sourceName = itemConfig.sourceName;
+                for(var l=0,len=orderBy.length;l<len;l++){
+                    var order = orderBy[l];
+                    var field = order.field;
+                    var pair = field.split(".");
+                    //排序字段跟来源实体/插叙不一致时，视为无效配置
+                    if(pair&&pair.length>1&&sourceName!=pair[0]){
+                        shouldDestroy = true;
+                        break;
+                    }
+                }
+                if(shouldDestroy){
+                    itemConfig.orderBy = [];
+                }
+            }
+        }
+    }
+}
+
 /**
  * 获取数据源
  * @param {String} dsCode 数据源编码
