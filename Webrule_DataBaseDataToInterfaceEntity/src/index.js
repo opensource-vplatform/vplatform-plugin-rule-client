@@ -223,8 +223,8 @@ var filterConfig = function(config){
             if(orderBy&&orderBy.length>0){
                 var shouldDestroy = false;
                 var sourceName = itemConfig.sourceName;
-                for(var l=0,len=orderBy.length;l<len;l++){
-                    var order = orderBy[l];
+                for(var k=0,len=orderBy.length;k<len;k++){
+                    var order = orderBy[k];
                     var field = order.field;
                     var pair = field.split(".");
                     //排序字段跟来源实体/插叙不一致时，视为无效配置
