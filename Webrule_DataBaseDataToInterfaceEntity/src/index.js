@@ -165,6 +165,7 @@ var main = function (ruleContext) {
                             "treeStruct": treeStructMap,
                             "methodContext": ruleContext.getMethodContext(),
                             "isAsync": isLast ? false : true,
+                            "depth":itemConfig['dataLoad'],
                             "isAppend": false
                         });
                         promise.then(dynamicLoadCallBackFunc).catch(_reject);
