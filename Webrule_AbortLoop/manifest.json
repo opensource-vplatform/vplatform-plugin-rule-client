@@ -6,6 +6,7 @@
         "type": "rule",
         "code": "AbortLoop",
         "name": "中断循环",
+        "isAsync":false,
         "desc": "在循环体内部使用，用于中断最近的封闭循环体（break）或中断最近的封闭循环体的一次迭代，开始新的迭代（continue）。\n方法名：AbortLoop",
         "entry": "com.yindangu.vplatform.rule.client.abortloop.main",
         "defineUrl": "./dist/index.js"
