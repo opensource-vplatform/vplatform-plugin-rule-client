@@ -261,7 +261,7 @@ var getTableRecords = function (tableName, whereRestrict, tmpNullIn, isAutoSelec
                         if (rec) {
                             var criteria = vds.ds.createCriteria();
                             for (var p in filterCondition) {
-                                fieldValue = rec[p];
+                                var fieldValue = rec[p];
                                 criteria.eq(p, fieldValue)
                             }
                         }
