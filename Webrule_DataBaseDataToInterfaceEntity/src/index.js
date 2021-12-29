@@ -227,10 +227,15 @@ var filterConfig = function(config){
                 for(var k=0,len=orderBy.length;k<len;k++){
                     var order = orderBy[k];
                     var field = order.field;
-                    var pair = field.split(".");
+                    /*var pair = field.split(".");
                     //排序字段跟来源实体/插叙不一致时，视为无效配置
                     if(pair&&pair.length>1&&sourceName!=pair[0]){
                         shouldDestroy = true;
+                        break;
+                    }*/
+                    var idx = field.lastIndexOf(".");
+                    if(idx >0 && (sourceName != field.substring(0,idx))){
+                        shouldDestroy = true; //排序字段的表名与来源表不同
                         break;
                     }
                 }
